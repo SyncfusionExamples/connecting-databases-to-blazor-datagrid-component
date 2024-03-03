@@ -5,7 +5,7 @@ namespace Grid_MSSQL.Data
 {
     public class OrderData
     {
-        public string ConnectionString = "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=\"D:\\Documentation\\Final\\connection to database\\WebApp\\Grid_MSSQL\\Grid_MSSQL\\Grid_MSSQL\\App_Data\\NORTHWND.MDF\";Integrated Security=True;Connect Timeout=30";
+        public string ConnectionString = <Enter your connectionstring here>;
         public async Task<List<Order>> GetOrdersAsync()
         {
             string Query = "SELECT * FROM dbo.Orders ORDER BY OrderID;";
