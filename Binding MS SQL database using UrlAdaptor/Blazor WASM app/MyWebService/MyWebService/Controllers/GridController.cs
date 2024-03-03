@@ -56,7 +56,7 @@ namespace MyWebService.Controllers
         [Route("api/[controller]")]
         public List<Order> GetOrderData()
         {
-            string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""D:\Documentation\Final\connection to database\MSSQL using UrlAdaptor\Blazor_WASM\MyWebService\MyWebService\App_Data\NORTHWND.MDF"";Integrated Security=True;Connect Timeout=30";
+            string ConnectionString = <Enter Your connectionstring here>;
             string QueryStr = "SELECT * FROM dbo.Orders ORDER BY OrderID;";
             SqlConnection sqlConnection = new(ConnectionString);
             sqlConnection.Open();
@@ -81,7 +81,7 @@ namespace MyWebService.Controllers
         [Route("api/Grid/Insert")]
         public void Insert([FromBody] CRUDModel<Order> Value)
         {
-            string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""D:\Documentation\Final\connection to database\MSSQL using UrlAdaptor\Blazor_WASM\MyWebService\MyWebService\App_Data\NORTHWND.MDF"";Integrated Security=True;Connect Timeout=30";
+            string ConnectionString = <Enter Your connectionstring here>;
             string Query = $"Insert into Orders(CustomerID,Freight,ShipCity,EmployeeID) values('{Value.Value.CustomerID}','{Value.Value.Freight}','{Value.Value.ShipCity}','{Value.Value.EmployeeID}')";
             SqlConnection SqlConnection = new SqlConnection(ConnectionString);
             SqlConnection.Open();
@@ -95,7 +95,7 @@ namespace MyWebService.Controllers
         [Route("api/Grid/Update")]
         public void Update([FromBody] CRUDModel<Order> Value)
         {
-            string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""D:\Documentation\Final\connection to database\MSSQL using UrlAdaptor\Blazor_WASM\MyWebService\MyWebService\App_Data\NORTHWND.MDF"";Integrated Security=True;Connect Timeout=30";
+            string ConnectionString = <Enter Your connectionstring here>;
             string Query = $"Update Orders set CustomerID='{Value.Value.CustomerID}', Freight='{Value.Value.Freight}',EmployeeID='{Value.Value.EmployeeID}',ShipCity='{Value.Value.ShipCity}' where OrderID='{Value.Value.OrderID}'";
 
             SqlConnection SqlConnection = new SqlConnection(ConnectionString);
@@ -110,7 +110,7 @@ namespace MyWebService.Controllers
         [Route("api/Grid/Delete")]
         public void Delete([FromBody] CRUDModel<Order> Value)
         {
-            string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""D:\Documentation\Final\connection to database\MSSQL using UrlAdaptor\Blazor_WASM\MyWebService\MyWebService\App_Data\NORTHWND.MDF"";Integrated Security=True;Connect Timeout=30";
+            string ConnectionString = <Enter Your connectionstring here>;
             string Query = $"Delete from Orders where OrderID={Value.Key}";
             SqlConnection SqlConnection = new SqlConnection(ConnectionString);
             SqlConnection.Open();
@@ -122,7 +122,7 @@ namespace MyWebService.Controllers
         [Route("api/Grid/Batch")]
         public void Batch([FromBody] CRUDModel<Order> Value)
         {
-            string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""D:\Documentation\Final\connection to database\MSSQL using UrlAdaptor\Blazor_WASM\MyWebService\MyWebService\App_Data\NORTHWND.MDF"";Integrated Security=True;Connect Timeout=30";
+            string ConnectionString = <Enter Your connectionstring here>;
             if (Value.Changed != null)
             {
                 foreach (var Record in (IEnumerable<Order>)Value.Changed)

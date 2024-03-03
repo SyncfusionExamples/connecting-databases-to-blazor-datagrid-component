@@ -13,7 +13,7 @@ namespace Grid_MSSQL.Controllers
     public class GridController : ControllerBase
     {
 
-        string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""D:\Documentation\Final\connection to database\MSSQL using UrlAdaptor\Blazor_WASM\MyWebService\MyWebService\App_Data\NORTHWND.MDF"";Integrated Security=True;Connect Timeout=30";
+        string ConnectionString = <Enter your connectionstring here>;
         [HttpPost]
         [Route("api/[controller]")]
         public object Post([FromBody] DataManagerRequest DataManagerRequest)
