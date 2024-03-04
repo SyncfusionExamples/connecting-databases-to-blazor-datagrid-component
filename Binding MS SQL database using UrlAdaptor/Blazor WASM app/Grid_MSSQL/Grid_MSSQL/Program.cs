@@ -1,4 +1,4 @@
-using GridWASM_MSSQL_UrlAdaptor;
+using Grid_MSSQL;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Syncfusion.Blazor;
