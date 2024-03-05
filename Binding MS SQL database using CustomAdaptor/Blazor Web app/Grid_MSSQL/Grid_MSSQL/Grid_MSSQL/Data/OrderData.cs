@@ -5,8 +5,8 @@ namespace Grid_MSSQL.Data
 {
     public class OrderData
     {
-        //Enter the connectionstring of database
-        public string ConnectionString = <Enter your connectionstring here>;
+        //TODO: Enter the connectionstring of database
+        public string ConnectionString = @"<Enter a valid connection string>";
         public async Task<List<Order>> GetOrdersAsync()
         {
             //Create query to fetch data from database
@@ -42,7 +42,7 @@ namespace Grid_MSSQL.Data
             Connection.Open();
             //Execute the SQL Command
             SqlCommand SqlCommand = new SqlCommand(Query, Connection);
-            //Exceute this code to reflect the changes into the database
+            //Execute this code to reflect the changes into the database
             SqlCommand.ExecuteNonQuery();
             Connection.Close();
         }
@@ -55,7 +55,7 @@ namespace Grid_MSSQL.Data
             Connection.Open();
             //Execute the SQL Command
             SqlCommand SqlCommand = new SqlCommand(Query, Connection);
-            //Exceute this code to reflect the changes into the database
+            //Execute this code to reflect the changes into the database
             SqlCommand.ExecuteNonQuery();
             Connection.Close();
         }
@@ -68,7 +68,7 @@ namespace Grid_MSSQL.Data
             Connection.Open();
             //Execute the SQL Command
             SqlCommand SqlCommand = new SqlCommand(Query, Connection);
-            //Exceute this code to reflect the changes into the database
+            //Execute this code to reflect the changes into the database
             SqlCommand.ExecuteNonQuery();
             Connection.Close();
         }        
