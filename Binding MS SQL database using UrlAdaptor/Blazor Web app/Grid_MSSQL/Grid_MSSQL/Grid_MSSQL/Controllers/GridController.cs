@@ -12,7 +12,7 @@ namespace Grid_MSSQL.Controllers
     [ApiController]
     public class GridController : ControllerBase
     {
-        //Enter the connectionstring of database
+        //TODO: Enter the connectionstring of database
         string ConnectionString = @"<Enter a valid connection string>";
         [HttpPost]
         [Route("api/[controller]")]

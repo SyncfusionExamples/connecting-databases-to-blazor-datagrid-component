@@ -55,8 +55,6 @@ namespace MyWebService.Controllers
             {
                 DataSource = DataOperations.PerformTake(DataSource, DataManagerRequest.Take);
             }            
-            DataResult DataObject = new DataResult();
-            
             //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
             // In the above case we are using Paging so data are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
             return new { result = DataSource, count = count, aggregates = Aggregates };
@@ -64,14 +62,14 @@ namespace MyWebService.Controllers
         [Route("api/[controller]")]
         public List<Order> GetOrderData()
         {
-            //Enter the connectionstring of database
+            //TODO: Enter the connectionstring of database
             string ConnectionString = @"<Enter a valid connection string>";
             string QueryStr = "SELECT * FROM dbo.Orders ORDER BY OrderID;";
             SqlConnection sqlConnection = new(ConnectionString);
             sqlConnection.Open();
             //Initialize the SqlCommand
             SqlCommand SqlCommand = new(QueryStr, sqlConnection);
-            //Initialize the SqlDataAdapter
+            //initialize the SqlDataAdapter
             SqlDataAdapter DataAdapter = new(SqlCommand);
             DataTable DataTable = new();
             // Using SqlDataAdapter, process the query string and fill the data into the dataset
@@ -100,7 +98,7 @@ namespace MyWebService.Controllers
         /// <returns>Returns void</returns>
         public void Insert([FromBody] CRUDModel<Order> Value)
         {
-            //Enter the connectionstring of database
+            //TODO: Enter the connectionstring of database
             string ConnectionString = @"<Enter a valid connection string>";
             //Create query to insert the specific into the database by accessing its properties 
             string Query = $"Insert into Orders(CustomerID,Freight,ShipCity,EmployeeID) values('{Value.Value.CustomerID}','{Value.Value.Freight}','{Value.Value.ShipCity}','{Value.Value.EmployeeID}')";
@@ -122,7 +120,7 @@ namespace MyWebService.Controllers
         /// <returns>Returns void</returns>
         public void Update([FromBody] CRUDModel<Order> Value)
         {
-            //Enter the connectionstring of database
+            //TODO: Enter the connectionstring of database
             string ConnectionString = @"<Enter a valid connection string>";
             //Create query to update the changes into the database by accessing its properties
             string Query = $"Update Orders set CustomerID='{Value.Value.CustomerID}', Freight='{Value.Value.Freight}',EmployeeID='{Value.Value.EmployeeID}',ShipCity='{Value.Value.ShipCity}' where OrderID='{Value.Value.OrderID}'";
@@ -148,7 +146,7 @@ namespace MyWebService.Controllers
         /// <returns>Returns void</returns>
         public void Delete([FromBody] CRUDModel<Order> Value)
         {
-            //Enter the connectionstring of database
+            //TODO: Enter the connectionstring of database
             string ConnectionString = @"<Enter a valid connection string>";
             //Create query to remove the specific from database by passing the primary key column value.
             string Query = $"Delete from Orders where OrderID={Value.Key}";
@@ -169,7 +167,7 @@ namespace MyWebService.Controllers
         /// <returns>Returns void</returns>
         public void Batch([FromBody] CRUDModel<Order> Value)
         {
-            //Enter the connectionstring of database
+            //TODO: Enter the connectionstring of database
             string ConnectionString = @"<Enter a valid connection string>";
             if (Value.Changed != null)
             {

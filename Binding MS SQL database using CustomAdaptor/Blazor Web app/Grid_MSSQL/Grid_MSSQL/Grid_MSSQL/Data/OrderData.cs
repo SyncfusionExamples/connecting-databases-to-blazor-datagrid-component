@@ -5,7 +5,7 @@ namespace Grid_MSSQL.Data
 {
     public class OrderData
     {
-        //Enter the connectionstring of database
+        //TODO: Enter the connectionstring of database
         public string ConnectionString = @"<Enter a valid connection string>";
         public async Task<List<Order>> GetOrdersAsync()
         {
