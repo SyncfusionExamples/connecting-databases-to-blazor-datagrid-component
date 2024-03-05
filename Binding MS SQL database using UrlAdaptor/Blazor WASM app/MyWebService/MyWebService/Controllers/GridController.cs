@@ -14,7 +14,7 @@ namespace MyWebService.Controllers
         /// <summary>
         /// Returns the data collection as result and count after performing data operations based on request from <see cref=”DataManagerRequest”/>
         /// </summary>
-        /// <param name="dataManagerRequest">DataManagerRequest containes the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
+        /// <param name="dataManagerRequest">DataManagerRequest containes the information regarding searching, filtering, sorting, aggregates and paging which is handled on the DataGrid component side</param>
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
         [HttpPost]
         [Route("api/[controller]")]

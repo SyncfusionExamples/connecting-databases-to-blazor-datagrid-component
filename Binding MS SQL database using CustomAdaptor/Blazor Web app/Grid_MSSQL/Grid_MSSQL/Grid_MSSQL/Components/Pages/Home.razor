@@ -62,7 +62,7 @@
         /// Returns the data collection after performing data operations based on request from <see cref=”DataManagerRequest”/>
         /// </summary>
         /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
-        /// <param name="key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
         public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string key = null)
         {
@@ -131,7 +131,7 @@
         /// <summary>
         /// Inserts a new data item into the data collection.
         /// </summary>
-        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in applications.</param>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
         /// <param name="Value">The new record which is need to be inserted.</param>
         /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>Returns the newly inserted record details.</returns>
@@ -144,9 +144,9 @@
         /// <summary>
         /// Updates an existing data item in the data collection.
         /// </summary>
-        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in applications.</param>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
         /// <param name="Value">The modified record which is need to be updated.</param>
-        /// <param name="KeyField">The KeyField specifies the field name of the primary column.</param>
+        /// <param name="KeyField">The Key field specifies the field name of the primary column.</param>
         /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>Returns the updated data item.</returns>        
         public override async Task<object> UpdateAsync(DataManager DataManager, object Value, string KeyField, string Key)
@@ -159,9 +159,9 @@
         /// <summary>
         /// Removes a data item from the data collection.
         /// </summary>
-        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in applications.</param>
-        /// <param name="Value">The primaryColumnValue specifies the primary column value which is needs to be removed from the grid record.</param>
-        /// <param name="KeyField">The primaryColumnName specifies the field name of the primary column.</param>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="Value">The primary column value specifies the primary column value which is needs to be removed from the grid record.</param>
+        /// <param name="KeyField">The primary column name specifies the field name of the primary column.</param>
         /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>Returns the removed data item.</returns>
         public override async Task<object> RemoveAsync(DataManager DataManager, object Value, string KeyField, string Key)
