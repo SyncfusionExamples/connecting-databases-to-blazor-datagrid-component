@@ -64,7 +64,7 @@
         /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
         /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
-        public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string key = null)
+        public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string Key = null)
         {
             IEnumerable<Order> DataSource = await OrderService.GetOrdersAsync();
             // Handling Searching in Custom Adaptor.
