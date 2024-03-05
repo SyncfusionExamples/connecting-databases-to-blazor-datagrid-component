@@ -13,38 +13,42 @@ namespace Grid_MSSQL.Controllers
     public class GridController : ControllerBase
     {
         //Enter the connectionstring of database
-        string ConnectionString = <Enter your connectionstring here>;
+        string ConnectionString = @"<Enter a valid connection string>";
         [HttpPost]
         [Route("api/[controller]")]
         /// <summary>
         /// Returns the data collection as result and count after performing data operations based on request from <see cref=”DataManagerRequest”/>
         /// </summary>
-        /// <param name="dataManagerRequest">DataManagerRequest containes the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
+        /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
         public object Post([FromBody] DataManagerRequest DataManagerRequest)
         {
             IEnumerable<Order> DataSource = GetOrderData();
-            // Handling Searching in Custom Adaptor.
+            // Handling Searching in Url Adaptor.
             if (DataManagerRequest.Search != null && DataManagerRequest.Search.Count > 0)
             {
                 // Searching
                 DataSource = DataOperations.PerformSearching(DataSource, DataManagerRequest.Search);
             }
-            // Handling Filtering in Custom Adaptor.
+            // Handling Filtering in Url Adaptor.
             if (DataManagerRequest.Where != null && DataManagerRequest.Where.Count > 0)
             {
                 // Filtering
                 DataSource = DataOperations.PerformFiltering(DataSource, DataManagerRequest.Where, DataManagerRequest.Where[0].Operator);
             }
-            // Handling Sorting in Custom Adaptor.
+            // Handling Sorting in Url Adaptor.
             if (DataManagerRequest.Sorted != null && DataManagerRequest.Sorted.Count > 0)
             {
                 // Sorting
                 DataSource = DataOperations.PerformSorting(DataSource, DataManagerRequest.Sorted);
             }
             int count = DataSource.Cast<Order>().Count();
-
-            // Handling paging in Custom Adaptor.
+            // Handling Aggregation in Url Adaptor.
+            if (DataManagerRequest.Aggregates != null) // Aggregation
+            {  
+               Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);                
+            }
+            // Handling paging in Url Adaptor.
             if (DataManagerRequest.Skip != 0)
             {
                 // Paging
@@ -53,19 +57,9 @@ namespace Grid_MSSQL.Controllers
             if (DataManagerRequest.Take != 0)
             {
                 DataSource = DataOperations.PerformTake(DataSource, DataManagerRequest.Take);
-            }
-            // Handling Aggregation in Custom Adaptor.
-            DataResult DataObject = new DataResult();
-            if (DataManagerRequest.Aggregates != null) // Aggregation
-            {
-                DataObject.Result = DataSource;
-                DataObject.Count = count;
-                DataObject.Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
-
-                return DataManagerRequest.RequiresCounts ? DataObject : (object)DataSource;
-            }
+            }            
             //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
-            // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
+            // In the above case we are using Paging so data are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
             return new { result = DataSource, count = count };
         }
         [Route("api/[controller]")]
@@ -110,7 +104,7 @@ namespace Grid_MSSQL.Controllers
             SqlConnection.Open();
             //Execute the SQL Command
             SqlCommand SqlCommand = new SqlCommand(Query, SqlConnection);
-            //Exceute this code to reflect the changes into the database
+            //Execute this code to reflect the changes into the database
             SqlCommand.ExecuteNonQuery();
             SqlConnection.Close();
         }
@@ -131,7 +125,7 @@ namespace Grid_MSSQL.Controllers
             SqlConnection.Open();
             //Execute the SQL Command
             SqlCommand SqlCommand = new SqlCommand(Query, SqlConnection);
-            //Exceute this code to reflect the changes into the database
+            //Execute this code to reflect the changes into the database
             SqlCommand.ExecuteNonQuery();
             SqlConnection.Close();
         }
@@ -151,14 +145,14 @@ namespace Grid_MSSQL.Controllers
             SqlConnection.Open();
             //Execute the SQL Command
             SqlCommand SqlCommand = new SqlCommand(Query, SqlConnection);
-            //Exceute this code to reflect the changes into the database
+            //Execute this code to reflect the changes into the database
             SqlCommand.ExecuteNonQuery();
             SqlConnection.Close();
         }
         [HttpPost]
         [Route("api/Grid/Batch")]
         /// <summary>
-        /// Batchupdate (Insert, Update, Delete) a collection of datas item from the data collection.
+        /// Batch update (Insert, Update, Delete) a collection of data item from the data collection.
         /// </summary>
         /// <param name="CRUDModel<T>">The set of information along with details about the CRUD actions to be executed from the database.</param>
         /// <returns>Returns void</returns>
@@ -174,7 +168,7 @@ namespace Grid_MSSQL.Controllers
                     SqlConnection.Open();
                     //Execute the SQL Command
                     SqlCommand SqlCommand = new SqlCommand(Query, SqlConnection);
-                    //Exceute this code to reflect the changes into the database
+                    //Execute this code to reflect the changes into the database
                     SqlCommand.ExecuteNonQuery();
                     SqlConnection.Close();
                 }
@@ -190,7 +184,7 @@ namespace Grid_MSSQL.Controllers
                     SqlConnection.Open();
                     //Execute the SQL Command
                     SqlCommand SqlCommand = new SqlCommand(Query, SqlConnection);
-                    //Exceute this code to reflect the changes into the database
+                    //Execute this code to reflect the changes into the database
                     SqlCommand.ExecuteNonQuery();
                     SqlConnection.Close();
                 }
@@ -206,7 +200,7 @@ namespace Grid_MSSQL.Controllers
                     SqlConnection.Open();
                     //Execute the SQL Command
                     SqlCommand SqlCommand = new SqlCommand(Query, SqlConnection);
-                    //Exceute this code to reflect the changes into the database
+                    //Execute this code to reflect the changes into the database
                     SqlCommand.ExecuteNonQuery();
                     SqlConnection.Close();
                 }

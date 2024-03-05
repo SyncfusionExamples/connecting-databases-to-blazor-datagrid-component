@@ -61,8 +61,8 @@
         /// <summary>
         /// Returns the data collection after performing data operations based on request from <see cref=”DataManagerRequest”/>
         /// </summary>
-        /// <param name="dataManagerRequest">DataManagerRequest containes the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
-        /// <param name="additionalParam">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
+        /// <param name="key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
         public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string key = null)
         {
@@ -86,6 +86,12 @@
                 DataSource = DataOperations.PerformSorting(DataSource, DataManagerRequest.Sorted);
             }            
             int count = DataSource.Cast<Order>().Count();
+            // Handling Aggregates in Custom Adaptor.
+            IDictionary<string, object> Aggregates = null;
+            if (DataManagerRequest.Aggregates != null) // Aggregation
+            {
+                Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
+            }
             // Handling Paging in Custom Adaptor. For example, Skip is 0 and Take is equal to page size for first page.
             if (DataManagerRequest.Skip != 0)
             {
@@ -96,32 +102,8 @@
             {
                 DataSource = DataOperations.PerformTake(DataSource, DataManagerRequest.Take);
             }
-            // Handling Aggregates and Group in Custom Adaptor.
-            DataResult DataObject = new DataResult();
-            if (DataManagerRequest.Aggregates != null) // Aggregation
-            {
-                if (DataManagerRequest.Group != null)
-                {
-                    // For Aggregate alone
-                    IEnumerable ResultData = DataSource.ToList();
-                    //For Grouping
-                    foreach (var group in DataManagerRequest.Group)
-                    {
-                        ResultData = DataUtil.Group<Order>(ResultData, group, DataManagerRequest.Aggregates, 0, DataManagerRequest.GroupByFormatter);
-                    }
-                    DataObject.Result = ResultData;
-                }
-                else
-                {
-                    DataObject.Result = DataSource;
-                }
-                DataObject.Count = count;
-                DataObject.Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
-                //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
-                // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
-                return DataManagerRequest.RequiresCounts ? DataObject : (object)DataSource;
-            }
             // Handling Grouping in Custom Adaptor.
+            DataResult DataObject = new DataResult();
             if (DataManagerRequest.Group != null)
             {
                 IEnumerable ResultData = DataSource.ToList();
@@ -132,21 +114,26 @@
                 }
                 DataObject.Result = ResultData;
                 DataObject.Count = count;
+                //If both Grouping and Aggregate is enabled
+                if (DataManagerRequest.Aggregates != null)
+                {
+                    DataObject.Aggregates = Aggregates;
+                }
                 //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
                 // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
                 return DataManagerRequest.RequiresCounts ? DataObject : (object)ResultData;
             }
             //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
             // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
-            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = count } : (object)DataSource;
+            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = count, Aggregates = Aggregates } : (object)DataSource;
         }
 
         /// <summary>
         /// Inserts a new data item into the data collection.
         /// </summary>
-        /// <param name="dataManager">The DataManager is a data management component used for performing data operations in applications.</param>
-        /// <param name="record">The new record which is need to be inserted.</param>
-        /// <param name="additionalParam">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in applications.</param>
+        /// <param name="Value">The new record which is need to be inserted.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>Returns the newly inserted record details.</returns>
         public override async Task<object> InsertAsync(DataManager DataManager, object Value, string Key)
         {
@@ -157,12 +144,12 @@
         /// <summary>
         /// Updates an existing data item in the data collection.
         /// </summary>
-        /// <param name="dataManager">The DataManager is a data management component used for performing data operations in applications.</param>
-        /// <param name="record">The modified record which is need to be updated.</param>
-        /// <param name="primaryColumnName">The primaryColumnName specifies the field name of the primary column.</param>
-        /// <param name="additionalParam">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in applications.</param>
+        /// <param name="Value">The modified record which is need to be updated.</param>
+        /// <param name="KeyField">The KeyField specifies the field name of the primary column.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>Returns the updated data item.</returns>        
-        public override async Task<object> UpdateAsync(DataManager DataManager, object Value, string keyField, string key)
+        public override async Task<object> UpdateAsync(DataManager DataManager, object Value, string KeyField, string Key)
         {
             // Given that the Value property consists of modified record details. It can be used to update the changes into database by calling the predefined logic.             
             await OrderService.UpdateOrderAsync(Value as Order);
@@ -172,12 +159,12 @@
         /// <summary>
         /// Removes a data item from the data collection.
         /// </summary>
-        /// <param name="dataManager">The DataManager is a data management component used for performing data operations in applications.</param>
-        /// <param name="primaryColumnValue">The primaryColumnValue specifies the primary column value which is needs to be removed from the grid record.</param>
-        /// <param name="primaryColumnName">The primaryColumnName specifies the field name of the primary column.</param>
-        /// <param name="additionalParam">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in applications.</param>
+        /// <param name="Value">The primaryColumnValue specifies the primary column value which is needs to be removed from the grid record.</param>
+        /// <param name="KeyField">The primaryColumnName specifies the field name of the primary column.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>Returns the removed data item.</returns>
-        public override async Task<object> RemoveAsync(DataManager DataManager, object Value, string keyField, string key)
+        public override async Task<object> RemoveAsync(DataManager DataManager, object Value, string KeyField, string Key)
         {
             // Given that the key column is identified nullable interger type in the DataGrid, the primaryColumnValue can be utilized from Value property directly.
             await OrderService.RemoveOrderAsync(Value as int?);
