@@ -44,6 +44,7 @@ namespace Grid_MSSQL.Controllers
             }
             int count = DataSource.Cast<Order>().Count();
             // Handling Aggregation in Url Adaptor.
+            IDictionary<string, object> Aggregates = null;
             if (DataManagerRequest.Aggregates != null) // Aggregation
             {  
                Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);                
