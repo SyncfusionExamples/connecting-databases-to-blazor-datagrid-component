@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34525.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grid_MySQL", "Grid_MySQL\Grid_MySQL\Grid_MySQL.csproj", "{18AC0344-B73F-424D-9A21-C61495937723}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grid_MySQL.Client", "Grid_MySQL\Grid_MySQL.Client\Grid_MySQL.Client.csproj", "{BAF7653F-097E-4319-8A4B-07E72A66FFF0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{18AC0344-B73F-424D-9A21-C61495937723}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18AC0344-B73F-424D-9A21-C61495937723}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18AC0344-B73F-424D-9A21-C61495937723}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18AC0344-B73F-424D-9A21-C61495937723}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAF7653F-097E-4319-8A4B-07E72A66FFF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAF7653F-097E-4319-8A4B-07E72A66FFF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAF7653F-097E-4319-8A4B-07E72A66FFF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAF7653F-097E-4319-8A4B-07E72A66FFF0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F00C6F21-B341-41A3-ADB0-1A0B6F043F56}
+	EndGlobalSection
+EndGlobal
