@@ -68,32 +68,32 @@
         public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string Key = null)
         {
             IEnumerable<Order> DataSource = await OrderService.GetOrdersAsync();
-            // Handling Searching in Custom Adaptor.
+            // Handling Searching in CustomAdaptor.
             if (DataManagerRequest.Search != null && DataManagerRequest.Search.Count > 0)
             {
                 // Searching
                 DataSource = DataOperations.PerformSearching(DataSource, DataManagerRequest.Search);
             }
-            // Handling Filtering in Custom Adaptor.
+            // Handling Filtering in CustomAdaptor.
             if (DataManagerRequest.Where != null && DataManagerRequest.Where.Count > 0)
             {
                 // Filtering
                 DataSource = DataOperations.PerformFiltering(DataSource, DataManagerRequest.Where, DataManagerRequest.Where[0].Operator);
             }
-            // Handling Sorting in Custom Adaptor.
+            // Handling Sorting in CustomAdaptor.
             if (DataManagerRequest.Sorted != null && DataManagerRequest.Sorted.Count > 0)
             {
                 // Sorting
                 DataSource = DataOperations.PerformSorting(DataSource, DataManagerRequest.Sorted);
             }
-            int count = DataSource.Cast<Order>().Count();
-            // Handling Aggregates in Custom Adaptor.
+            int TotalRecordsCount = DataSource.Cast<Order>().Count();
+            // Handling Aggregates in CustomAdaptor.
             IDictionary<string, object> Aggregates = null;
             if (DataManagerRequest.Aggregates != null) // Aggregation
             {
                 Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
             }
-            // Handling Paging in Custom Adaptor. For example, Skip is 0 and Take is equal to page size for first page.
+            // Handling Paging in CustomAdaptor. For example, Skip is 0 and Take is equal to page size for first page.
             if (DataManagerRequest.Skip != 0)
             {
                 //Paging
@@ -103,7 +103,7 @@
             {
                 DataSource = DataOperations.PerformTake(DataSource, DataManagerRequest.Take);
             }
-            // Handling Grouping in Custom Adaptor.
+            // Handling Grouping in CustomAdaptor.
             DataResult DataObject = new DataResult();
             if (DataManagerRequest.Group != null)
             {
@@ -114,19 +114,19 @@
                     ResultData = DataUtil.Group<Order>(ResultData, group, DataManagerRequest.Aggregates, 0, DataManagerRequest.GroupByFormatter);
                 }
                 DataObject.Result = ResultData;
-                DataObject.Count = count;
+                DataObject.Count = TotalRecordsCount;
                 //If both Grouping and Aggregate is enabled
                 if (DataManagerRequest.Aggregates != null)
                 {
                     DataObject.Aggregates = Aggregates;
                 }
-                //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
-                // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
+                //Here RequiresCount is passed from the control side itself, where ever the on-demand data fetching is needed then the RequiresCount is set as true in component side itself.
+                // In the above case we are using Paging so datas are loaded in on-demand bases whenever the next page is clicked in DataGrid side.
                 return DataManagerRequest.RequiresCounts ? DataObject : (object)ResultData;
             }
-            //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
-            // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
-            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = count, Aggregates = Aggregates } : (object)DataSource;
+            //Here RequiresCount is passed from the control side itself, where ever the on-demand data fetching is needed then the RequiresCount is set as true in component side itself.
+            // In the above case we are using Paging so datas are loaded in on-demand bases whenever the next page is clicked in DataGrid side.
+            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = TotalRecordsCount, Aggregates = Aggregates } : (object)DataSource;
         }
 
         /// <summary>
@@ -173,7 +173,7 @@
         }
 
         /// <summary>
-        /// /// Batchupdate (Insert, Update, Delete) a collection of data item from the data collection.
+        /// /// Batchupdate (Insert, Update, Delete) a collection of data items from the data collection.
         /// </summary>
         /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
         /// <param name="Changed">The Changed specifies the collection of record updated in batch mode which needs to be updated from the grid record.</param>

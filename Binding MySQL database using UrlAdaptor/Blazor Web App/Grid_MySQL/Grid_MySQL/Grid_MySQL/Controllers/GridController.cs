@@ -24,32 +24,32 @@ namespace Grid_MySQL.Controllers
         public object Post([FromBody] DataManagerRequest DataManagerRequest)
         {
             IEnumerable<Order> DataSource = GetOrderData();
-            // Handling Searching in Url Adaptor.
+            // Handling Searching in UrlAdaptor.
             if (DataManagerRequest.Search != null && DataManagerRequest.Search.Count > 0)
             {
                 // Searching
                 DataSource = DataOperations.PerformSearching(DataSource, DataManagerRequest.Search);
             }
-            // Handling Filtering in Url Adaptor.
+            // Handling Filtering in UrlAdaptor.
             if (DataManagerRequest.Where != null && DataManagerRequest.Where.Count > 0)
             {
                 // Filtering
                 DataSource = DataOperations.PerformFiltering(DataSource, DataManagerRequest.Where, DataManagerRequest.Where[0].Operator);
             }
-            // Handling Sorting in Url Adaptor.
+            // Handling Sorting in UrlAdaptor.
             if (DataManagerRequest.Sorted != null && DataManagerRequest.Sorted.Count > 0)
             {
                 // Sorting
                 DataSource = DataOperations.PerformSorting(DataSource, DataManagerRequest.Sorted);
             }
-            int count = DataSource.Cast<Order>().Count();
-            // Handling Aggregation in Url Adaptor.
+            int TotalRecordsCount = DataSource.Cast<Order>().Count();
+            // Handling Aggregation in UrlAdaptor.
             IDictionary<string, object> Aggregates = null;
             if (DataManagerRequest.Aggregates != null) // Aggregation
             {
                 Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
             }
-            // Handling paging in Url Adaptor.
+            // Handling paging in UrlAdaptor.
             if (DataManagerRequest.Skip != 0)
             {
                 // Paging
@@ -61,7 +61,7 @@ namespace Grid_MySQL.Controllers
             }
             //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
             // In the above case we are using Paging so data are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
-            return new { result = DataSource, count = count, aggregates = Aggregates };
+            return new { result = DataSource, count = TotalRecordsCount, aggregates = Aggregates };
         }
         [Route("api/[controller]")]
         public List<Order> GetOrderData()
@@ -77,7 +77,7 @@ namespace Grid_MySQL.Controllers
             // Using MySqlDataAdapter, process the query string and fill the data into the dataset
             DataAdapter.Fill(DataTable);
             sqlConnection.Close();
-            //Cast the data fetched from Adaptor to List<T>
+            //Cast the data fetched from MySqlDataAdapter to List<T>
             var DataSource = (from DataRow Data in DataTable.Rows
                               select new Order()
                               {
@@ -153,7 +153,7 @@ namespace Grid_MySQL.Controllers
         [HttpPost]
         [Route("api/Grid/Batch")]
         /// <summary>
-        /// Batch update (Insert, Update, Delete) a collection of data item from the data collection.
+        /// Batch update (Insert, Update, Delete) a collection of data items from the data collection.
         /// </summary>
         /// <param name="CRUDModel<T>">The set of information along with details about the CRUD actions to be executed from the database.</param>
         /// <returns>Returns void</returns>

@@ -67,32 +67,32 @@
         public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string Key = null)
         {
             IEnumerable<Order> DataSource = await OrderService.GetOrdersAsync();
-            // Handling Searching in Custom Adaptor.
+            // Handling Searching in CustomAdaptor.
             if (DataManagerRequest.Search != null && DataManagerRequest.Search.Count > 0)
             {
                 // Searching
                 DataSource = DataOperations.PerformSearching(DataSource, DataManagerRequest.Search);
             }
-            // Handling Filtering in Custom Adaptor.
+            // Handling Filtering in CustomAdaptor.
             if (DataManagerRequest.Where != null && DataManagerRequest.Where.Count > 0)
             {
                 // Filtering
                 DataSource = DataOperations.PerformFiltering(DataSource, DataManagerRequest.Where, DataManagerRequest.Where[0].Operator);
             }
-            // Handling Sorting in Custom Adaptor.
+            // Handling Sorting in CustomAdaptor.
             if (DataManagerRequest.Sorted != null && DataManagerRequest.Sorted.Count > 0)
             {
                 // Sorting
                 DataSource = DataOperations.PerformSorting(DataSource, DataManagerRequest.Sorted);
             }            
-            int count = DataSource.Cast<Order>().Count();
-            // Handling Aggregates in Custom Adaptor.
+            int TotalRecordsCount = DataSource.Cast<Order>().Count();
+            // Handling Aggregates in CustomAdaptor.
             IDictionary<string, object> Aggregates = null;
             if (DataManagerRequest.Aggregates != null) // Aggregation
             {
                 Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
             }
-            // Handling Paging in Custom Adaptor. For example, Skip is 0 and Take is equal to page size for first page.
+            // Handling Paging in CustomAdaptor. For example, Skip is 0 and Take is equal to page size for first page.
             if (DataManagerRequest.Skip != 0)
             {
                 //Paging
@@ -102,7 +102,7 @@
             {
                 DataSource = DataOperations.PerformTake(DataSource, DataManagerRequest.Take);
             }
-            // Handling Grouping in Custom Adaptor.
+            // Handling Grouping in CustomAdaptor.
             DataResult DataObject = new DataResult();
             if (DataManagerRequest.Group != null)
             {
@@ -113,19 +113,19 @@
                     ResultData = DataUtil.Group<Order>(ResultData, group, DataManagerRequest.Aggregates, 0, DataManagerRequest.GroupByFormatter);
                 }
                 DataObject.Result = ResultData;
-                DataObject.Count = count;
+                DataObject.Count = TotalRecordsCount;
                 //If both Grouping and Aggregate is enabled
                 if (DataManagerRequest.Aggregates != null)
                 {
                     DataObject.Aggregates = Aggregates;
                 }
-                //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
-                // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
+                //Here RequiresCount is passed from the control side itself, where ever the on-demand data fetching is needed then the RequiresCount is set as true in component side itself.
+                // In the above case we are using paging so datas are loaded in on-demand bases whenever the next page is clicked in DataGrid side.
                 return DataManagerRequest.RequiresCounts ? DataObject : (object)ResultData;
             }
-            //Here RequiresCount is passed from the control side itself, where ever the ondemand data fetching is needed then the RequiresCount is set as true in component side itself.
-            // In the above case we are using Paging so datas are loaded in ondemand bases whenever the next page is clicked in DataGrid side.
-            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = count, Aggregates = Aggregates } : (object)DataSource;
+            //Here RequiresCount is passed from the control side itself, where ever the on-demand data fetching is needed then the RequiresCount is set as true in component side itself.
+            // In the above case we are using paging so datas are loaded in on-demand bases whenever the next page is clicked in DataGrid side.
+            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = TotalRecordsCount, Aggregates = Aggregates } : (object)DataSource;
         }
 
         /// <summary>
@@ -169,6 +169,43 @@
             // Given that the key column is identified nullable interger type in the DataGrid, the primaryColumnValue can be utilized from Value property directly.
             await OrderService.RemoveOrderAsync(Value as int?);
             return Value;
+        }
+
+        /// <summary>
+        /// /// Batchupdate (Insert, Update, Delete) a collection of data items from the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="Changed">The Changed specifies the collection of record updated in batch mode which needs to be updated from the grid record.</param>
+        /// <param name="Added">The Added specifies the collection of record inserted in batch mode which needs to be inserted from the grid record.</param>
+        /// <param name="Deleted">The Deleted specifies the collection of record deleted in batch mode which needs to be removed from the grid record.</param>
+        /// <param name="KeyField">The KeyField specifies the field name of the primary column.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="DropIndex">An optional parameter that can be used to perform row drag and drop operation.</param>
+        /// <returns>Returns the removed data item.</returns>
+        public override async Task<object> BatchUpdateAsync(DataManager DataManager, object Changed, object Added, object Deleted, string KeyField, string Key, int? DropIndex)
+        {
+            if (Changed != null)
+            {
+                foreach (var record in (IEnumerable<Order>)Changed)
+                {
+                    await OrderService.UpdateOrderAsync(record as Order);
+                }
+            }
+            if (Added != null)
+            {
+                foreach (var record in (IEnumerable<Order>)Added)
+                {
+                    await OrderService.AddOrderAsync(record as Order);
+                }
+            }
+            if (Deleted != null)
+            {
+                foreach (var record in (IEnumerable<Order>)Deleted)
+                {
+                    await OrderService.RemoveOrderAsync((record as Order).OrderID);
+                }
+            }
+            return Key;
         }
     }
 }

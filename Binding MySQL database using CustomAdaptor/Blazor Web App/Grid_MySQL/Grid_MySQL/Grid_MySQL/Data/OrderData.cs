@@ -23,7 +23,7 @@ namespace Grid_MySQL.Data
                 Connection.Open();
                 // Using MySqlDataAdapter, process the query string and fill the data into the dataset
                 adapter.Fill(data);
-                //Cast the data fetched from Adapter to List<T>
+                //Cast the data fetched from MySqlDataAdapter to List<T>
                 Orders = data.Tables[0].AsEnumerable().Select(r => new Order
                 {
                     OrderID = r.Field<int>("OrderID"),
