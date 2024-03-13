@@ -21,7 +21,7 @@ namespace Grid_MSSQL.Data
                 Connection.Open();
                 // Using SqlDataAdapter, process the query string and fill the data into the dataset
                 Adapter.Fill(Data);
-                //Cast the data fetched from Adapter to List<T>
+                //Cast the data fetched from SqlDataAdapter to List<T>
                 Orders = Data.Tables[0].AsEnumerable().Select(r => new Order
                 {
                     OrderID = r.Field<int>("OrderID"),

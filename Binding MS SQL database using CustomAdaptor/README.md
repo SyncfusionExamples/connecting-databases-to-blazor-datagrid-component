@@ -1,4 +1,5 @@
-# blazor-grid-mssql-connectivity-using-custom-adaptor
+# Blazor Grid Microsoft SQL Server connectivity using CustomAdaptor
+
 A project that enables data binding and CRUD action handling in the Syncfusion Blazor DataGrid to a Microsoft SQL Server using CustomAdaptor feature of the Grid.
 
 ## Steps to run the sample
