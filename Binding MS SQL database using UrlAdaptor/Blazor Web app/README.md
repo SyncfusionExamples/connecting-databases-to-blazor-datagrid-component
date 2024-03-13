@@ -1,4 +1,4 @@
-# Blazor DataGrid Microsoft SQL connectivity using UrlAdaptor
+# Blazor DataGrid Microsoft SQL Server connectivity using UrlAdaptor
 
 A project that enables data binding and CRUD action handling in the Syncfusion Blazor DataGrid to a Microsoft SQL Server using UrlAdaptor feature.
 
