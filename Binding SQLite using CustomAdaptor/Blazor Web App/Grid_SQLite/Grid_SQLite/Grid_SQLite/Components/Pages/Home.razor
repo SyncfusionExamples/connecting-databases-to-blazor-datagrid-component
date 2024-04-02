@@ -1,0 +1,212 @@
+﻿@page "/"
+
+@rendermode InteractiveServer
+
+@using Syncfusion.Blazor.Grids;
+@using Syncfusion.Blazor.Data;
+@using Syncfusion.Blazor;
+@using Grid_SQLite.Data;
+@using System.Collections;
+
+<SfGrid TValue="Order" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" AllowPaging="true" Toolbar="@(new List<string>() { "Add","Edit", "Delete", "Update", "Cancel", "Search" })">
+    <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+    <GridPageSettings PageSize="4"></GridPageSettings>
+    <GridEditSettings AllowEditing="true" AllowDeleting="true" AllowAdding="true" Mode="@EditMode.Normal"></GridEditSettings>
+    <GridAggregates>
+        <GridAggregate>
+            <GridAggregateColumns>
+                <GridAggregateColumn Field=@nameof(Order.Freight) Type="AggregateType.Sum" Format="C2">
+                    <FooterTemplate>
+                        @{
+                            var aggregate = (context as AggregateTemplateContext);
+                            <div>
+                                <p>Sum: @aggregate.Sum</p>
+                            </div>
+                        }
+                    </FooterTemplate>
+                </GridAggregateColumn>
+            </GridAggregateColumns>
+        </GridAggregate>
+        <GridAggregate>
+            <GridAggregateColumns>
+                <GridAggregateColumn Field=@nameof(Order.Freight) Type="AggregateType.Average" Format="C2">
+                    <FooterTemplate>
+                        @{
+                            var aggregate = (context as AggregateTemplateContext);
+                            <div>
+                                <p>Average: @aggregate.Average</p>
+                            </div>
+                        }
+                    </FooterTemplate>
+                </GridAggregateColumn>
+            </GridAggregateColumns>
+        </GridAggregate>
+    </GridAggregates>
+    <GridColumns>
+        <GridColumn Field=@nameof(Order.OrderID) HeaderText="Order ID" IsPrimaryKey="true" ValidationRules="@(new ValidationRules{ Required= true })" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+        <GridColumn Field=@nameof(Order.CustomerID) HeaderText="Customer Name" ValidationRules="@(new ValidationRules{ Required= true, MinLength = 3 })" Width="150"></GridColumn>
+        <GridColumn Field=@nameof(Order.EmployeeID) HeaderText="Employee ID" TextAlign="TextAlign.Right" Width="150"></GridColumn>
+        <GridColumn Field=@nameof(Order.Freight) HeaderText="Freight" TextAlign="TextAlign.Right" Format="C2" Width="150"></GridColumn>
+        <GridColumn Field=@nameof(Order.ShipCity) HeaderText="Ship City" Width="150"></GridColumn>
+    </GridColumns>
+</SfGrid>
+
+@code {
+    /// <summary>
+    /// Implementing custom adaptor by extending the <see cref=“DataAdaptor”/> class.
+    /// The DataGrid component support for custom data binding, which enables the binding and manipulation of data in a personalized way, using user-defined methods.
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public OrderData OrderService = new OrderData();
+        /// <summary>
+        /// Returns the data collection after performing data operations based on request from <see cref=”DataManagerRequest”/>
+        /// </summary>
+        /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching which is handled on the DataGrid component side</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
+        public override async Task<object> ReadAsync(DataManagerRequest DataManagerRequest, string Key = null)
+        {
+            IEnumerable<Order> DataSource = await OrderService.GetOrdersAsync();
+            // Handling Searching in CustomAdaptor.
+            if (DataManagerRequest.Search != null && DataManagerRequest.Search.Count > 0)
+            {
+                // Searching
+                DataSource = DataOperations.PerformSearching(DataSource, DataManagerRequest.Search);
+            }
+            // Handling Filtering in CustomAdaptor.
+            if (DataManagerRequest.Where != null && DataManagerRequest.Where.Count > 0)
+            {
+                // Filtering
+                DataSource = DataOperations.PerformFiltering(DataSource, DataManagerRequest.Where, DataManagerRequest.Where[0].Operator);
+            }
+            // Handling Sorting in CustomAdaptor.
+            if (DataManagerRequest.Sorted != null && DataManagerRequest.Sorted.Count > 0)
+            {
+                // Sorting
+                DataSource = DataOperations.PerformSorting(DataSource, DataManagerRequest.Sorted);
+            }
+            int TotalRecordsCount = DataSource.Cast<Order>().Count();
+            // Handling Aggregates in CustomAdaptor.
+            IDictionary<string, object> Aggregates = null;
+            if (DataManagerRequest.Aggregates != null) // Aggregation
+            {
+                Aggregates = DataUtil.PerformAggregation(DataSource, DataManagerRequest.Aggregates);
+            }
+            // Handling Paging in CustomAdaptor. For example, Skip is 0 and Take is equal to page size for first page.
+            if (DataManagerRequest.Skip != 0)
+            {
+                //Paging
+                DataSource = DataOperations.PerformSkip(DataSource, DataManagerRequest.Skip);
+            }
+            if (DataManagerRequest.Take != 0)
+            {
+                DataSource = DataOperations.PerformTake(DataSource, DataManagerRequest.Take);
+            }
+            // Handling Grouping in CustomAdaptor.
+            DataResult DataObject = new DataResult();
+            if (DataManagerRequest.Group != null)
+            {
+                IEnumerable ResultData = DataSource.ToList();
+                // Grouping
+                foreach (var group in DataManagerRequest.Group)
+                {
+                    ResultData = DataUtil.Group<Order>(ResultData, group, DataManagerRequest.Aggregates, 0, DataManagerRequest.GroupByFormatter);
+                }
+                DataObject.Result = ResultData;
+                DataObject.Count = TotalRecordsCount;
+                //If both Grouping and Aggregate is enabled
+                if (DataManagerRequest.Aggregates != null)
+                {
+                    DataObject.Aggregates = Aggregates;
+                }
+                //Here RequiresCount is passed from the control side itself, where ever the on-demand data fetching is needed then the RequiresCount is set as true in component side itself.
+                // In the above case we are using paging so datas are loaded in on-demand bases whenever the next page is clicked in DataGrid side.
+                return DataManagerRequest.RequiresCounts ? DataObject : (object)ResultData;
+            }
+            //Here RequiresCount is passed from the control side itself, where ever the on-demand data fetching is needed then the RequiresCount is set as true in component side itself.
+            // In the above case we are using paging so datas are loaded in on-demand bases whenever the next page is clicked in DataGrid side.
+            return DataManagerRequest.RequiresCounts ? new DataResult() { Result = DataSource, Count = TotalRecordsCount, Aggregates = Aggregates } : (object)DataSource;
+        }
+
+        /// <summary>
+        /// Inserts a new data item into the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="Value">The new record which is need to be inserted.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>Returns the newly inserted record details.</returns>
+        public override async Task<object> InsertAsync(DataManager DataManager, object Value, string Key)
+        {
+            // Given that the Value property consists of newly inserted record details. It can be used to insert the records into database by calling the predefined logic.
+            await OrderService.AddOrderAsync(Value as Order);
+            return Value;
+        }
+        /// <summary>
+        /// Updates an existing data item in the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="Value">The modified record which is need to be updated.</param>
+        /// <param name="KeyField">The Key field specifies the field name of the primary column.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>Returns the updated data item.</returns>
+        public override async Task<object> UpdateAsync(DataManager DataManager, object Value, string KeyField, string Key)
+        {
+            // Given that the Value property consists of modified record details. It can be used to update the changes into database by calling the predefined logic.
+            await OrderService.UpdateOrderAsync(Value as Order);
+            return Value;
+        }
+
+        /// <summary>
+        /// Removes a data item from the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="Value">The primary column value specifies the primary column value which is needs to be removed from the grid record.</param>
+        /// <param name="KeyField">The primary column name specifies the field name of the primary column.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>Returns the removed data item.</returns>
+        public override async Task<object> RemoveAsync(DataManager DataManager, object Value, string KeyField, string Key)
+        {
+            // Given that the key column is identified nullable interger type in the DataGrid, the primaryColumnValue can be utilized from Value property directly.
+            await OrderService.RemoveOrderAsync(Value as int?);
+            return Value;
+        }
+
+        /// <summary>
+        /// /// Batchupdate (Insert, Update, Delete) a collection of data items from the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="Changed">The Changed specifies the collection of record updated in batch mode which needs to be updated from the grid record.</param>
+        /// <param name="Added">The Added specifies the collection of record inserted in batch mode which needs to be inserted from the grid record.</param>
+        /// <param name="Deleted">The Deleted specifies the collection of record deleted in batch mode which needs to be removed from the grid record.</param>
+        /// <param name="KeyField">The KeyField specifies the field name of the primary column.</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="DropIndex">An optional parameter that can be used to perform row drag and drop operation.</param>
+        /// <returns>Returns the removed data item.</returns>
+        public override async Task<object> BatchUpdateAsync(DataManager DataManager, object Changed, object Added, object Deleted, string KeyField, string Key, int? DropIndex)
+        {
+            if (Changed != null)
+            {
+                foreach (var record in (IEnumerable<Order>)Changed)
+                {
+                    await OrderService.UpdateOrderAsync(record as Order);
+                }
+            }
+            if (Added != null)
+            {
+                foreach (var record in (IEnumerable<Order>)Added)
+                {
+                    await OrderService.AddOrderAsync(record as Order);
+                }
+            }
+            if (Deleted != null)
+            {
+                foreach (var record in (IEnumerable<Order>)Deleted)
+                {
+                    await OrderService.RemoveOrderAsync((record as Order).OrderID);
+                }
+            }
+            return Key;
+        }
+    }
+}
