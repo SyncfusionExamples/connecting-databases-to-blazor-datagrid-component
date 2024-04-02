@@ -14,7 +14,7 @@ namespace Grid_Dapper.Controllers
     public class GridController : ControllerBase
     {
         //TODO: Enter the connectionstring of database
-        string ConnectionString = $"Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=\"C:\\Users\\NaveenPalanivel\\Downloads\\BlazorApp6 5\\BlazorApp6\\BlazorApp6\\App_Data\\NORTHWND.MDF\";Integrated Security=True;Connect Timeout=30";
+        string ConnectionString = $"<Enter Your connectionstring here>";
         /// <summary>
         /// Returns the data collection as result and count after performing data operations based on request from <see cref=”DataManagerRequest”/>
         /// </summary>

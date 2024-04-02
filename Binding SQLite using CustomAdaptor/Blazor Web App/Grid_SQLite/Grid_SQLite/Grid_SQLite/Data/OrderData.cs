@@ -6,7 +6,7 @@ namespace Grid_SQLite.Data
     public class OrderData
     {
         // TODO: Enter the connection string of the database
-        string ConnectionString = "Data Source=C:/Users/NaveenPalanivel/Downloads/Mydatabase/testDB.db";
+        string ConnectionString = "<Enter your connectionstring here>";
         public async Task<List<Order>> GetOrdersAsync()
         {
             // Create query to fetch data from the database
