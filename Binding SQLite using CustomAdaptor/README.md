@@ -1,6 +1,6 @@
-# Blazor Grid Microsoft SQL Server connectivity using CustomAdaptor
+# Blazor Grid SQLite database connectivity using CustomAdaptor
 
-A project that enables data binding and CRUD action handling in the Syncfusion Blazor DataGrid to a Microsoft SQL Server using CustomAdaptor feature of the Grid.
+A project that enables data binding and CRUD action handling in the Syncfusion Blazor DataGrid to a SQLite database using CustomAdaptor feature of the Grid.
 
 ## Steps to run the sample
 
@@ -8,8 +8,6 @@ A project that enables data binding and CRUD action handling in the Syncfusion B
 
 2. Open ServerExplorer tab in Visual Studio.
 
-3. Add NORTHWND.MDF database located in the App_Data folder Grid_MSSQL project into the application.
+3. Replace your SQLite database's connectionstring in OrderData.cs file.
 
-4. Replace connected database's connectionstring in OrderData.cs file.
-
-5. Run the application
+4. Run the application
