@@ -17,5 +17,5 @@ Here, we have explained in detail how to bind the listed databases below to the 
 1. Microsoft SQL Server Database
 2. MYSQL Database
 3. PostgreSQL Database
-4. PostgreSQL
+4. Dapper
 5. SQLite
