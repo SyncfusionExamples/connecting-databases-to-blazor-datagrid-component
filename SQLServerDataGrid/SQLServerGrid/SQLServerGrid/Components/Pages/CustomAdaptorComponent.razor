@@ -1,0 +1,63 @@
+﻿@using Syncfusion.Blazor;
+@using Syncfusion.Blazor.Data;
+@using Newtonsoft.Json
+@using static SQLServerGrid.Components.Pages.Home;
+@using Microsoft.Data.SqlClient;
+@using System.Data;
+@using Microsoft.AspNetCore.Hosting;
+@inject IHostingEnvironment _env
+ 
+@inherits DataAdaptor<Order>
+ 
+<CascadingValue Value="@this">
+    @ChildContent
+</CascadingValue>
+ 
+@code {
+    [Parameter]
+    [JsonIgnore]
+    public RenderFragment ChildContent { get; set; }
+    public static DataSet CreateCommand(string queryString, string connectionString)
+    {
+        using (SqlConnection connection = new SqlConnection(
+                   connectionString))
+        {
+ 
+            SqlDataAdapter adapter = new SqlDataAdapter(queryString, connection);
+            DataSet dt = new DataSet();
+            try
+            {
+                connection.Open();
+                adapter.Fill(dt);// Using SqlDataAdapter, we can process the query string and fill the data into the dataset.
+            }
+            catch (SqlException se)
+            {
+                Console.WriteLine(se.ToString());
+            }
+            finally
+            {
+                connection.Close();
+            }
+            return dt;
+        }
+    }
+    // Performs data Read operation.
+    public override object Read(DataManagerRequest dm, string key = null)
+    {
+        string appdata = _env.ContentRootPath;
+        string str = $"<Enter a valid connection string>"; // Here, we construct SQL query string based on the skip and take count from DataManagerRequest.
+        string qs = "SELECT OrderID, CustomerID FROM dbo.Orders ORDER BY OrderID OFFSET " + dm.Skip + "ROWS FETCH NEXT " + dm.Take + " ROWS ONLY;";
+        DataSet data = CreateCommand(qs, str);        
+        Orders = data.Tables[0].AsEnumerable().Select(order => new Order
+        {
+            OrderID = order.Field<int>("OrderID"),
+            CustomerID = order.Field<string>("CustomerID")
+        }).ToList();  // Convert the DataSet into a list or orders.
+        IEnumerable<Order> DataSource = Orders;
+        SqlConnection conn = new SqlConnection(str);
+        conn.Open();
+        SqlCommand comm = new SqlCommand("SELECT COUNT(*) FROM dbo.Orders", conn);
+        Int32 count = (Int32)comm.ExecuteScalar();
+        return dm.RequiresCounts ? new DataResult() { Result = DataSource, Count = count } : (object)DataSource;
+    }
+}
