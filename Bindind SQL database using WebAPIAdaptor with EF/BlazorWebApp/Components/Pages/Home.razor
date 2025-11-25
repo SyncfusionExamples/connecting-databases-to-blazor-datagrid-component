@@ -1,0 +1,13 @@
+﻿@page "/"
+@using BlazorApp.Data
+
+<SfGrid TValue="Order" Toolbar="@(new List<string>() {"Add", "Edit", "Delete", "Cancel", "Update"})">
+    <SfDataManager Url="api/orders" Adaptor="Adaptors.WebApiAdaptor" ></SfDataManager>
+    <GridEditSettings AllowAdding="true" AllowDeleting="true" AllowEditing="true"></GridEditSettings>
+    <GridColumns>
+        <GridColumn Field=@nameof(Order.OrderId) HeaderText="Order ID" IsIdentity="true" IsPrimaryKey="true" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+        <GridColumn Field=@nameof(Order.CustomerId) HeaderText="Customer Name" Width="150"></GridColumn>
+        <GridColumn Field=@nameof(Order.OrderDate) HeaderText=" Order Date" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+        <GridColumn Field=@nameof(Order.Freight) HeaderText="Freight" Format="C2" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+    </GridColumns>
+</SfGrid>
