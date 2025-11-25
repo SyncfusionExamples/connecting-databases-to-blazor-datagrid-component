@@ -1,6 +1,7 @@
 using BlazorApp.Components;
 using BlazorApp.Data; 
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
+using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +10,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddDbContext<OrdersDetailsContext>(option => 
                 option.UseSqlServer(builder.Configuration.GetConnectionString("OrdersDetailsDatabase"))); 
-builder.Services.AddControllers(); 
+builder.Services.AddControllers();
+builder.Services.AddSyncfusionBlazor();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
