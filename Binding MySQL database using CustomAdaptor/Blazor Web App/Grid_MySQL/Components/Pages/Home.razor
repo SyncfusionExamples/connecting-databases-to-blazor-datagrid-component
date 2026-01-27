@@ -206,7 +206,7 @@
     /// <summary>
     /// Provides a list of payment gateway options used as a data source for the Gateway dropdown editor in the grid.
     /// </summary>
-    public static List<TransactionModel> CustomGateway = new List<TransactionModel> {
+    private static List<TransactionModel> CustomGateway = new List<TransactionModel> {
         new TransactionModel() { PaymentGateway = "Razorpay" },
         new TransactionModel() { PaymentGateway= "GooglePay" },
         new TransactionModel() { PaymentGateway= "Stripe" },
@@ -217,7 +217,7 @@
     /// <summary>
     /// Provides a list of transaction types used as a data source for the Type dropdown editor in the grid.
     /// </summary>
-    public static List<TransactionModel> CustomType = new List<TransactionModel> {
+    private static List<TransactionModel> CustomType = new List<TransactionModel> {
         new TransactionModel() { TransactionType = "SALE" },
         new TransactionModel() { TransactionType = "REFUND" },
         new TransactionModel() { TransactionType = "TOPUP" },
@@ -226,7 +226,7 @@
     /// <summary>
     /// Provides a list of transaction statuses used as a data source for the Status dropdown editor in the grid.
     /// </summary>
-    public static List<TransactionModel> CustomStatus = new List<TransactionModel> {
+    private static List<TransactionModel> CustomStatus = new List<TransactionModel> {
         new TransactionModel() { Status = "SUCCESS" },
         new TransactionModel() { Status = "PROCESSING" },
         new TransactionModel() { Status = "PENDING" },
@@ -236,7 +236,7 @@
     /// <summary>
     /// Dropdown editor settings configured with payment gateway options for the PaymentGateway column in grid edit mode.
     /// </summary>
-    public IEditorSettings GatewayDropDownParams = new DropDownEditCellParams
+    private IEditorSettings GatewayDropDownParams = new DropDownEditCellParams
     {
         Params = new DropDownListModel<object, object>() { DataSource = CustomGateway, Query = new Syncfusion.Blazor.Data.Query() },
     };
@@ -244,7 +244,7 @@
     /// <summary>
     /// Dropdown editor settings configured with transaction type options for the TransactionType column in grid edit mode.
     /// </summary>
-    public IEditorSettings TypeDropDownParams = new DropDownEditCellParams
+    private IEditorSettings TypeDropDownParams = new DropDownEditCellParams
     {
         Params = new DropDownListModel<object, object>() { DataSource = CustomType, Query = new Syncfusion.Blazor.Data.Query() },
     };
@@ -252,7 +252,7 @@
     /// <summary>
     /// Dropdown editor settings configured with transaction status options for the Status column in grid edit mode.
     /// </summary>
-    public IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
     {
         Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
     };
