@@ -77,7 +77,6 @@
 
     protected override void OnInitialized()
     {
-        // Initialize the CustomAdaptor with the injected TransactionRepository
         _customAdaptor = new CustomAdaptor { TransactionService = TransactionService };
     }
 

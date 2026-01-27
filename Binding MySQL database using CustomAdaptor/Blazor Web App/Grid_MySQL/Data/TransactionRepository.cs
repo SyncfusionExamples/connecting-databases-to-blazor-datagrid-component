@@ -47,14 +47,11 @@ namespace Grid_MySQL.Data
         {
             try
             {
-                // Use provided CreatedAt date or current date if null
                 DateTime dateToUse = createdAtDate ?? DateTime.Now;
                 string datepart = dateToUse.ToString("yyMMdd");
 
-                // Format the primary key ID as 5-digit padded number
                 string formattedId = primaryKeyId.ToString("D5");
 
-                // Generate TransactionId: TXN + YYMMDD + 5-digit ID
                 string transactionId = $"{PublicTransactionIdPrefix}{datepart}{formattedId}";
 
                 return transactionId;
@@ -62,7 +59,6 @@ namespace Grid_MySQL.Data
             catch (Exception ex)
             {
                 Console.WriteLine($"Error generating transaction ID: {ex.Message}");
-                // Fallback: generate with current date and provided ID
                 string datepart = DateTime.Now.ToString("yyMMdd");
                 return $"{PublicTransactionIdPrefix}{datepart}{primaryKeyId:D5}";
             }
@@ -76,35 +72,26 @@ namespace Grid_MySQL.Data
         /// <param name="value">The transaction model to add</param>
         public async Task AddTransactionAsync(TransactionModel transaction)
         {
-            // Validate required fields
             if (transaction == null)
                 throw new ArgumentNullException(nameof(transaction), "Transaction cannot be null");
 
-            // Set default values if not provided
             if (transaction.CreatedAt == null)
                 transaction.CreatedAt = DateTime.Now;
 
             if (string.IsNullOrWhiteSpace(transaction.CurrencyCode))
                 transaction.CurrencyCode = "INR";
 
-            // IMPORTANT: Generate a temporary TransactionId BEFORE insert to satisfy NOT NULL constraint
-            // This uses a temporary high sequence number that will be updated after getting the real ID
             string temporaryTransactionId = GeneratePublicTransactionId(transaction.CreatedAt, 99999);
             transaction.TransactionId = temporaryTransactionId;
 
-            // Add the transaction to the context
             _context.Transactions.Add(transaction);
 
-            // Save changes to get the generated ID
             await _context.SaveChangesAsync();
 
-            // Generate the final TransactionId using the actual inserted ID and CreatedAt date
             string finalTransactionId = GeneratePublicTransactionId(transaction.CreatedAt, transaction.Id);
 
-            // Update the transaction with the final TransactionId
             transaction.TransactionId = finalTransactionId;
 
-            // Mark as modified and save changes
             _context.Transactions.Update(transaction);
             await _context.SaveChangesAsync();
         }
@@ -119,11 +106,9 @@ namespace Grid_MySQL.Data
         /// <exception cref="KeyNotFoundException">Thrown if the transaction to update does not exist in the database.</exception>
         public async Task UpdateTransactionAsync(TransactionModel transaction)
         {
-            // Validate that the transaction object is not null
             if (transaction == null)
                 throw new ArgumentNullException(nameof(transaction), "Transaction cannot be null");
 
-            // Check if transaction exists in the database by its ID
             var existingTransaction = await _context.Transactions.FindAsync(transaction.Id);
             if (existingTransaction == null)
                 throw new KeyNotFoundException($"Transaction with ID {transaction.Id} not found in the database.");
@@ -139,12 +124,9 @@ namespace Grid_MySQL.Data
             existingTransaction.PaymentGateway = transaction.PaymentGateway;
             existingTransaction.CompletedAt = transaction.CompletedAt;
             existingTransaction.Status = transaction.Status;
-            // Note: CreatedAt is not updated as it should remain the original creation time
-
-            // Mark the entity as modified
+            
             _context.Transactions.Update(existingTransaction);
 
-            // Save changes (existingTransaction is already tracked, so no need to call Update)
             await _context.SaveChangesAsync();
         }
 
@@ -156,16 +138,13 @@ namespace Grid_MySQL.Data
         {
             try
             {
-                // Validate input
                 if (key == null || key <= 0)
                     throw new ArgumentException("Transaction ID cannot be null or invalid", nameof(key));
-
-                // Find the transaction
+                
                 var transaction = await _context.Transactions.FindAsync(key);
                 if (transaction == null)
                     throw new KeyNotFoundException($"Transaction with ID {key} not found");
 
-                // Remove and save
                 _context.Transactions.Remove(transaction);
                 await _context.SaveChangesAsync();
             }
