@@ -1,0 +1,273 @@
+@page "/"
+@rendermode InteractiveServer
+@using System.Collections
+@using Grid_MySQL.Data
+@using Syncfusion.Blazor.Data
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.DropDowns
+@inject TransactionRepository TransactionService
+
+<SfGrid TValue="TransactionModel" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" AllowPaging="true"
+    Height="500px" Width="100%" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
+    <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+    <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+    <GridEditSettings AllowEditing="true" AllowAdding="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+    <GridPageSettings PageSize="10"></GridPageSettings>
+    <GridColumns>
+        <GridColumn Field=@nameof(TransactionModel.Id) IsPrimaryKey="true" ShowInColumnChooser="false" ShowColumnMenu="false"></GridColumn>
+        <GridColumn Field=@nameof(TransactionModel.TransactionId) HeaderText="Transaction ID" Width="170" TextAlign="TextAlign.Left" AllowAdding="false" AllowEditing="false">
+            <Template>
+                @{
+                    var data = (TransactionModel)context;
+                }   
+                <a class="status-text status-ticket-id">
+                    @data.TransactionId
+                </a>
+            </Template>
+        </GridColumn>
+        <GridColumn Field=@nameof(TransactionModel.CustomerId) HeaderText="Customer ID" Width="140" ValidationRules="@(new ValidationRules { Required = true })" EditType="EditType.NumericEdit" />
+        <GridColumn Field=@nameof(TransactionModel.OrderId) HeaderText="Order ID" Width="120" ValidationRules="@(new ValidationRules { Required = true })" EditType="EditType.NumericEdit" />
+        <GridColumn Field=@nameof(TransactionModel.InvoiceNumber) HeaderText="Invoice No" Width="130" EditType="EditType.DefaultEdit" />
+        <GridColumn Field=@nameof(TransactionModel.Description) HeaderText="Description" Width="180" EditType="EditType.DefaultEdit" />
+        <GridColumn Field=@nameof(TransactionModel.Amount) HeaderText="Amount" Width="130" ValidationRules="@(new ValidationRules { Required = true })" Format="N2" TextAlign="TextAlign.Right" EditType="EditType.NumericEdit">
+            <Template>
+                @{
+                    var amount = (context as TransactionModel)?.Amount ?? 0;
+                    var amountClass = amount < 0 ? "amnt-negative" : "amnt-positive";
+                }
+                <span class="@amountClass">@amount.ToString("N2")</span>
+            </Template>
+        </GridColumn>
+        <GridColumn Field=@nameof(TransactionModel.CurrencyCode) HeaderText="Curr" Width="100" TextAlign="TextAlign.Center" EditType="EditType.DefaultEdit" />
+        <GridColumn Field=@nameof(TransactionModel.TransactionType) HeaderText="Type" Width="100" EditType="EditType.DropDownEdit" EditorSettings="@TypeDropDownParams">
+            <Template>
+                @{
+                    var data = (TransactionModel)context;
+                }
+                <span class="chip @GetCategoryClass(data)">
+                    @data.TransactionType
+                </span>
+            </Template>
+        </GridColumn>
+        <GridColumn Field=@nameof(TransactionModel.PaymentGateway) HeaderText="Gateway" Width="130" EditType="EditType.DropDownEdit" EditorSettings="@GatewayDropDownParams" />
+        <GridColumn Field=@nameof(TransactionModel.CreatedAt) HeaderText="Created" Width="170" Format="dd-MMM-yy hh:mm tt" TextAlign="TextAlign.Right" Type="ColumnType.DateTime" AllowEditing="false" />
+        <GridColumn Field=@nameof(TransactionModel.CompletedAt) HeaderText="Completed" Width="170" Format="dd-MMM-yy hh:mm tt" TextAlign="TextAlign.Right" Type="ColumnType.DateTime" EditType="EditType.DateTimePickerEdit" />
+
+        <GridColumn Field=@nameof(TransactionModel.Status) HeaderText="Status" Width="110" ValidationRules="@(new ValidationRules { Required = true })" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams">
+            <Template>
+                @{
+                    var status = (context as TransactionModel)?.Status;
+                    var badgeClass = status?.ToLower() switch
+                    {
+                        "success" => "e-badge e-badge-success",
+                        "failed" => "e-badge e-badge-danger",
+                        "pending" => "e-badge e-badge-warning",
+                        "processing" => "e-badge e-badge-info",
+                        _ => "e-badge"
+                    };
+                }
+                <span class="@badgeClass">@status</span>
+            </Template>
+        </GridColumn>
+    </GridColumns>
+</SfGrid>
+
+@code {
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected TransactionRepository
+        _customAdaptor = new CustomAdaptor { TransactionService = TransactionService };
+    }
+
+    /// <summary>
+    /// CustomAdaptor class to handle grid data operations with MySQL using Entity Framework
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static TransactionRepository? _transactionService { get; set; }
+        public TransactionRepository? TransactionService 
+        { 
+            get => _transactionService;
+            set => _transactionService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            IEnumerable < TransactionModel > dataSource = await _transactionService!.GetTransactionsAsync();
+
+            // Handling Search
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+            }
+
+            // Handling Filtering
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+
+            // Handling Sorting
+            if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+            {
+                dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+            }
+
+            // Handling Aggregation in CustomAdaptor.
+            IDictionary<string, object>? aggregates = null;
+            if (dataManagerRequest.Aggregates != null) // Aggregation
+            {
+                aggregates = DataUtil.PerformAggregation(dataSource, dataManagerRequest.Aggregates);
+            }
+
+            int totalRecordsCount = dataSource.Cast<TransactionModel>().Count();
+            DataResult dataObject = new DataResult();
+            // Handling Group operation in CustomAdaptor.
+            if (dataManagerRequest.Group != null)
+            {
+                IEnumerable ResultData = dataSource.ToList();
+                // Grouping
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    ResultData = DataUtil.Group<TransactionModel>(ResultData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    //Add custom logic here if needed and remove above method
+                }
+                dataObject.Result = ResultData;
+                dataObject.Count = totalRecordsCount;
+                dataObject.Aggregates = aggregates;
+                return dataManagerRequest.RequiresCounts ? dataObject : (object)ResultData;
+            }
+
+            // Handling Paging
+            if (dataManagerRequest.Skip != 0)
+            {
+                dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                //Add custom logic here if needed and remove above method
+            }
+
+            if (dataManagerRequest.Take != 0)
+            {
+                dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                //Add custom logic here if needed and remove above method
+            }
+
+            return dataManagerRequest.RequiresCounts 
+                ? new DataResult() { Result = dataSource, Count = totalRecordsCount } 
+                : (object)dataSource;
+        }
+
+        public override async Task<object> InsertAsync(DataManager dataManager, object value, string? key)
+        {
+            await _transactionService!.AddTransactionAsync(value as TransactionModel);
+            return value;
+        }
+
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            await _transactionService!.UpdateTransactionAsync(value as TransactionModel);
+            return value;
+        }
+
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            await _transactionService!.RemoveTransactionAsync(value as int?);
+            return value;
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            if (changedRecords != null)
+            {
+                foreach (var record in (IEnumerable<TransactionModel>)changedRecords)
+                {
+                    await _transactionService!.UpdateTransactionAsync(record as TransactionModel);
+                }
+            }
+            if (addedRecords != null)
+            {
+                foreach (var record in (IEnumerable<TransactionModel>)addedRecords)
+                {
+                    await _transactionService!.AddTransactionAsync(record as TransactionModel);
+                }
+            }
+            if (deletedRecords != null)
+            {
+                foreach (var record in (IEnumerable<TransactionModel>)deletedRecords)
+                {
+                    await _transactionService!.RemoveTransactionAsync((record as TransactionModel).Id);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of payment gateway options used as a data source for the Gateway dropdown editor in the grid.
+    /// </summary>
+    private static List<TransactionModel> CustomGateway = new List<TransactionModel> {
+        new TransactionModel() { PaymentGateway = "Razorpay" },
+        new TransactionModel() { PaymentGateway= "GooglePay" },
+        new TransactionModel() { PaymentGateway= "Stripe" },
+        new TransactionModel() { PaymentGateway= "PhonePe" },
+        new TransactionModel() { PaymentGateway= "Paytm" },
+    };
+
+    /// <summary>
+    /// Provides a list of transaction types used as a data source for the Type dropdown editor in the grid.
+    /// </summary>
+    private static List<TransactionModel> CustomType = new List<TransactionModel> {
+        new TransactionModel() { TransactionType = "SALE" },
+        new TransactionModel() { TransactionType = "REFUND" },
+        new TransactionModel() { TransactionType = "TOPUP" },
+    };
+
+    /// <summary>
+    /// Provides a list of transaction statuses used as a data source for the Status dropdown editor in the grid.
+    /// </summary>
+    private static List<TransactionModel> CustomStatus = new List<TransactionModel> {
+        new TransactionModel() { Status = "SUCCESS" },
+        new TransactionModel() { Status = "PROCESSING" },
+        new TransactionModel() { Status = "PENDING" },
+        new TransactionModel() { Status = "FAILED" },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with payment gateway options for the PaymentGateway column in grid edit mode.
+    /// </summary>
+    private IEditorSettings GatewayDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomGateway, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with transaction type options for the TransactionType column in grid edit mode.
+    /// </summary>
+    private IEditorSettings TypeDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomType, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with transaction status options for the Status column in grid edit mode.
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Returns a CSS class name based on the transaction type to apply visual styling in the grid template.
+    /// </summary>
+    private string GetCategoryClass(TransactionModel data)
+    {
+        return data.TransactionType?.ToLower() switch
+        {
+            "sale" => "category-sale",
+            "topup" => "category-topup",
+            "refund" => "category-refund",
+            _ => ""
+        };
+    }
+}
