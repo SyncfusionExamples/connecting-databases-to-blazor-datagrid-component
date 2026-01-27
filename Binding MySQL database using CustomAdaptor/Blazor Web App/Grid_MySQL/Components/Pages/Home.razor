@@ -81,54 +81,6 @@
         _customAdaptor = new CustomAdaptor { TransactionService = TransactionService };
     }
 
-    public static List<TransactionModel> CustomGateway = new List<TransactionModel> {
-        new TransactionModel() { PaymentGateway = "Razorpay" },
-        new TransactionModel() { PaymentGateway= "GooglePay" },
-        new TransactionModel() { PaymentGateway= "Stripe" },
-        new TransactionModel() { PaymentGateway= "PhonePe" },
-        new TransactionModel() { PaymentGateway= "Paytm" },
-    };
-
-    public static List<TransactionModel> CustomType  = new List<TransactionModel> {
-        new TransactionModel() { TransactionType = "SALE" },
-        new TransactionModel() { TransactionType = "REFUND" },
-        new TransactionModel() { TransactionType = "TOPUP" },
-    };
-
-    public static List<TransactionModel> CustomStatus = new List<TransactionModel> {
-        new TransactionModel() { Status = "SUCCESS" },
-        new TransactionModel() { Status = "PROCESSING" },
-        new TransactionModel() { Status = "PENDING" },
-        new TransactionModel() { Status = "FAILED" },
-    };
-
-
-    public IEditorSettings GatewayDropDownParams = new DropDownEditCellParams
-    {
-        Params = new DropDownListModel<object, object>() { DataSource = CustomGateway, Query = new Syncfusion.Blazor.Data.Query() },
-    };
-
-    public IEditorSettings TypeDropDownParams = new DropDownEditCellParams
-    {
-        Params = new DropDownListModel<object, object>() { DataSource = CustomType, Query = new Syncfusion.Blazor.Data.Query() },
-    };
-
-    public IEditorSettings StatusDropDownParams = new DropDownEditCellParams
-    {
-        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
-    };
-
-    private string GetCategoryClass(TransactionModel data)
-    {
-        return data.TransactionType?.ToLower() switch
-        {
-            "sale" => "category-sale",
-            "topup" => "category-topup",
-            "refund" => "category-refund",
-            _ => ""
-        };
-    }
-
     /// <summary>
     /// CustomAdaptor class to handle grid data operations with MySQL using Entity Framework
     /// </summary>
@@ -249,5 +201,73 @@
             }
             return key;
         }
+    }
+
+    /// <summary>
+    /// Provides a list of payment gateway options used as a data source for the Gateway dropdown editor in the grid.
+    /// </summary>
+    public static List<TransactionModel> CustomGateway = new List<TransactionModel> {
+        new TransactionModel() { PaymentGateway = "Razorpay" },
+        new TransactionModel() { PaymentGateway= "GooglePay" },
+        new TransactionModel() { PaymentGateway= "Stripe" },
+        new TransactionModel() { PaymentGateway= "PhonePe" },
+        new TransactionModel() { PaymentGateway= "Paytm" },
+    };
+
+    /// <summary>
+    /// Provides a list of transaction types used as a data source for the Type dropdown editor in the grid.
+    /// </summary>
+    public static List<TransactionModel> CustomType = new List<TransactionModel> {
+        new TransactionModel() { TransactionType = "SALE" },
+        new TransactionModel() { TransactionType = "REFUND" },
+        new TransactionModel() { TransactionType = "TOPUP" },
+    };
+
+    /// <summary>
+    /// Provides a list of transaction statuses used as a data source for the Status dropdown editor in the grid.
+    /// </summary>
+    public static List<TransactionModel> CustomStatus = new List<TransactionModel> {
+        new TransactionModel() { Status = "SUCCESS" },
+        new TransactionModel() { Status = "PROCESSING" },
+        new TransactionModel() { Status = "PENDING" },
+        new TransactionModel() { Status = "FAILED" },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with payment gateway options for the PaymentGateway column in grid edit mode.
+    /// </summary>
+    public IEditorSettings GatewayDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomGateway, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with transaction type options for the TransactionType column in grid edit mode.
+    /// </summary>
+    public IEditorSettings TypeDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomType, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with transaction status options for the Status column in grid edit mode.
+    /// </summary>
+    public IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Returns a CSS class name based on the transaction type to apply visual styling in the grid template.
+    /// </summary>
+    private string GetCategoryClass(TransactionModel data)
+    {
+        return data.TransactionType?.ToLower() switch
+        {
+            "sale" => "category-sale",
+            "topup" => "category-topup",
+            "refund" => "category-refund",
+            _ => ""
+        };
     }
 }
