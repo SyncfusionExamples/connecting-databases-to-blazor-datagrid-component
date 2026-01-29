@@ -1,0 +1,492 @@
+@page "/"
+@using System.Collections
+@using Grid_MSSQL.Data
+@inject TicketRepository TicketService
+<PageTitle>Network Support Ticket System</PageTitle>
+
+<section class="bg-gray-50 dark:bg-gray-950">
+    <div class="mx-auto w-full py-12 sm:px-6 px-4">
+        <h1 class="mb-4 text-3xl font-bold">Network Support Ticket System</h1>
+        <p class="mb-3 text-gray-600">Manage and view all support tickets from the database.</p>
+        <SfGrid TValue="Tickets" Width="100%" Height="500px" AllowSorting="true" AllowFiltering="true" AllowPaging="true" AllowGrouping="true"
+            Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+            <GridEditSettings AllowEditing="true" AllowDeleting="true" AllowAdding="true" Mode="EditMode.Batch"></GridEditSettings>
+            <GridPageSettings PageSize="10"></GridPageSettings>
+            <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+            <GridColumns>
+                <GridColumn Field=@nameof(Tickets.TicketId) IsPrimaryKey="true" IsIdentity="true" ShowInColumnChooser="false" ShowColumnMenu="false"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.PublicTicketId) IsIdentity="true" HeaderText="Ticket ID" Width="160" TextAlign="TextAlign.Right">
+                    <Template>
+                        @{
+                            var data = (Tickets)context;
+                        }
+                        <a class="status-text status-ticket-id">
+                            @data.PublicTicketId
+                        </a>
+                    </Template>
+                </GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.Title) HeaderText="Subject" Width="280" ClipMode="ClipMode.EllipsisWithTooltip" EditType="EditType.DefaultEdit"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.Status) HeaderText="Status" Width="180" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams">
+                    <Template>
+                        @{
+                            var data = (Tickets)context;
+                        }
+                        <span class="status-text @GetStatusClass(data)" title="@GetStatusDescription(data)">
+                            @data.Status
+                        </span>
+                    </Template>
+                </GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.Priority) HeaderText="Priority" Width="160" EditType="EditType.DropDownEdit" EditorSettings="@PriorityDropDownParams">
+                    <Template>
+                        @{
+                            var data = (Tickets)context;
+                        }
+                        <span class="priority-pill @GetPriorityClass(data)" title="@GetPriorityDescription(data)">
+                            <span class="priority-icon" aria-hidden="true"></span>
+                            @data.Priority
+                        </span>
+                    </Template>
+                </GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.Category) HeaderText="Category" Width="180" EditType="EditType.DropDownEdit" EditorSettings="@CategoryDropDownParams">
+                    <Template>
+                        @{
+                            var data = (Tickets)context;
+                        }
+                        <span class="chip @GetCategoryClass(data)">
+                            @data.Category
+                        </span>
+                    </Template>
+                </GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.Department) HeaderText="Department" Width="170" EditType="EditType.DropDownEdit" EditorSettings="@DepartmentDropDownParams"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.CreatedBy) HeaderText="Requested By" Width="180" EditType="EditType.DropDownEdit" EditorSettings="@CreatedByDropDownParams"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.Assignee) HeaderText="Agent" Width="160" EditType="EditType.DropDownEdit" EditorSettings="@AssigneeDropDownParams"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.DueDate) HeaderText="Resolution Due" Width="200" Type="ColumnType.DateTime" Format="MMM d, yyyy, h:mm tt" EditType="EditType.DateTimePickerEdit"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.ResponseDue) HeaderText="Response Due" Width="200" EditType="EditType.DateTimePickerEdit">
+                    <Template>
+                        @{
+                            var data = (Tickets)context;
+                        }
+                        <span class="@GetResponseDueClass(data)" title="@GetResponseDueTooltip(data)">
+                            @(data.ResponseDue?.ToString("MMM d, yyyy, h:mm tt") ?? "")
+                        </span>
+                    </Template>
+                </GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.UpdatedAt) HeaderText="Last Modified" Width="200" Type="ColumnType.DateTime" Format="MMM d, yyyy, h:mm tt" EditType="EditType.DateTimePickerEdit"></GridColumn>
+                
+                <GridColumn Field=@nameof(Tickets.CreatedAt) HeaderText="Created On" Width="200" Type="ColumnType.DateTime" Format="MMM d, yyyy, h:mm tt" EditType="EditType.DateTimePickerEdit"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</section>
+
+@code{
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected TicketRepository
+        _customAdaptor = new CustomAdaptor { TicketService = TicketService };
+    }
+
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static TicketRepository? _ticketService { get; set; }
+
+        public TicketRepository? TicketService
+        {
+            get => _ticketService;
+            set => _ticketService = value;
+        }
+
+        /// <summary>
+        /// Returns the data collection after performing data operations based on request from <see cref="DataManagerRequest"/>
+        /// </summary>
+        /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching, sorting which is handled on the Blazor DataGrid component side</param>
+        /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
+        {
+            IEnumerable<Tickets> dataSource = await _ticketService!.GetTicketsDataAsync();
+            
+            // Handling Searching in CustomAdaptor.
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+            }
+
+            // Handling Filtering in CustomAdaptor.
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+
+            // Handling Sorting in CustomAdaptor.
+            if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+            {
+                dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+            }
+
+            // Handling Aggregates
+            IDictionary<string, object>? aggregates = null;
+            if (dataManagerRequest.Aggregates != null)
+            {
+                aggregates = DataUtil.PerformAggregation(dataSource, dataManagerRequest.Aggregates);
+            }
+
+            int totalRecordsCount = dataSource.Cast<Tickets>().Count();
+            DataResult dataObject = new DataResult();
+            // Handling Group operation in CustomAdaptor.
+            if (dataManagerRequest.Group != null)
+            {
+                IEnumerable ResultData = dataSource.ToList();
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    ResultData = DataUtil.Group<Tickets>(ResultData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                }
+                dataObject.Result = ResultData;
+                dataObject.Count = totalRecordsCount;
+                return dataManagerRequest.RequiresCounts ? dataObject : (object)ResultData;
+            }
+            // Handling paging in CustomAdaptor.
+            if (dataManagerRequest.Skip != 0)
+            {
+                dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+            }
+            if (dataManagerRequest.Take != 0)
+            {
+                dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+            }
+            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = dataSource, Count = totalRecordsCount, Aggregates = aggregates } : (object)dataSource;
+        }
+
+        /// <summary>
+        /// Inserts a new data item into the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="value">The new record which is need to be inserted.</param>
+        /// <param name="key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>Returns the newly inserted record details.</returns>
+        public override async Task<object> InsertAsync(DataManager DataManager, object value, string key)
+        {
+            // Add your insert logic here
+            await _ticketService!.AddTicketAsync(value as Tickets);
+            return value;
+        }
+
+        /// <summary>
+        /// Updates an existing data item in the data collection.
+        /// </summary>
+        /// <param name="DataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="value">The modified record which is need to be updated.</param>
+        /// <param name="keyField">The primary column name specifies the field name of the primary column.</param>
+        /// <param name="key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>Returns the updated data item.</returns>
+        public override async Task<object> UpdateAsync(DataManager DataManager, object value, string keyField, string key)
+        {
+            // Add your update logic here
+            await _ticketService!.UpdateTicketAsync(value as Tickets);
+            return value;
+        }
+
+        /// <summary>
+        /// Removes a data item from the data collection.
+        /// </summary>
+        /// <param name="dataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="value">The Value specifies the primary column value which is needs to be removed from the grid record.</param>
+        /// <param name="keyField">The KeyField specifies the field name of the primary column.</param>
+        /// <param name="key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <returns>Returns the removed data item.</returns>
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+
+            await _ticketService!.RemoveTicketAsync(value as int?);
+            return value;
+        }
+
+        /// <summary>
+        /// Batchupdate (Insert, Update, Delete) a collection of data items from the data collection.
+        /// </summary>
+        /// <param name="dataManager">The DataManager is a data management component used for performing data operations in application.</param>
+        /// <param name="changed">The Changed specifies the collection of record updated in batch mode which needs to be updated from the grid record.</param>
+        /// <param name="added">The Added specifies the collection of record inserted in batch mode which needs to be inserted from the grid record.</param>
+        /// <param name="deleted">The Deleted specifies the collection of record deleted in batch mode which needs to be removed from the grid record.</param>
+        /// <param name="keyField">The KeyField specifies the field name of the primary column.</param>
+        /// <param name="key">An optional parameter that can be used to perform additional data operations.</param>
+        /// <param name="dropIndex">An optional parameter that can be used to perform row drag and drop operation.</param>
+        /// <returns>Returns the removed data item.</returns>
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changed, object added, object deleted, string keyField, string key, int? dropIndex)
+        {
+            if (changed != null)
+            {
+                foreach (var record in (IEnumerable<Tickets>)changed)
+                {
+                    await _ticketService!.UpdateTicketAsync(record as Tickets);
+                }
+            }
+            if (added != null)
+            {
+                foreach (var record in (IEnumerable<Tickets>)added)
+                {
+                    await _ticketService!.AddTicketAsync(record as Tickets);
+                }
+            }
+            if (deleted != null)
+            {
+                foreach (var record in (IEnumerable<Tickets>)deleted)
+                {
+                    await _ticketService!.RemoveTicketAsync((record as Tickets).TicketId);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of status options used as the data source for the Status dropdown editor in the grid.
+    /// </summary>
+    private static List<Tickets> StatusCustomData = new List<Tickets> {
+            new Tickets() { Status= "Open" },
+            new Tickets() { Status= "InProgress" },
+            new Tickets() { Status= "WaitingForCustomer" },
+            new Tickets() { Status= "WaitingForAgent" },
+            new Tickets() { Status= "Resolved" },
+            new Tickets() { Status= "Closed" },
+        };
+    
+    /// <summary>
+    /// Configures the dropdown editor used by the Status column via EditorSettings="@StatusDropDownParams".
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = StatusCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Provides a list of priority options used as the data source for the Priority dropdown editor in the grid.
+    /// </summary>
+    private static List<Tickets> PriorityCustomData = new List<Tickets> {
+            new Tickets() { Priority= "Critical" },
+            new Tickets() { Priority= "High" },
+            new Tickets() { Priority= "Medium" },
+            new Tickets() { Priority= "Low" },
+        };
+    
+    /// <summary>
+    /// Configures the dropdown editor used by the Priority column via EditorSettings="@PriorityDropDownParams".
+    /// </summary>
+    private IEditorSettings PriorityDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = PriorityCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Provides a list of category options used as the data source for the Category dropdown editor in the grid.
+    /// </summary>
+    private static List<Tickets> CategoryCustomData = new List<Tickets> {
+            new Tickets() { Category= "Network Issue" },
+            new Tickets() { Category= "Network" },
+            new Tickets() { Category= "Performance" },
+            new Tickets() { Category= "VPN" },
+            new Tickets() { Category= "Hardware" },
+            new Tickets() { Category= "Server issue" },
+            new Tickets() { Category= "Server" },
+            new Tickets() { Category= "Security" },
+            new Tickets() { Category= "Connectivity" },
+            new Tickets() { Category= "Software" },
+            new Tickets() { Category= "Email" },
+            new Tickets() { Category= "Access" },
+            new Tickets() { Category= "Backup" },
+            new Tickets() { Category= "Database" },
+        };
+    
+    /// <summary>
+    /// Configures the dropdown editor used by the Category column via EditorSettings="@CategoryDropDownParams".
+    /// </summary>
+    private IEditorSettings CategoryDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CategoryCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Provides a list of department options used as the data source for the Department dropdown editor in the grid.
+    /// </summary>
+    private static List<Tickets> DepartmentCustomData = new List<Tickets> {
+            new Tickets() { Department= "IT Support" },
+            new Tickets() { Department= "Network Ops" },
+            new Tickets() { Department= "IT Security" },
+            new Tickets() { Department= "Infrastructure" },
+            new Tickets() { Department= "Database Admin" },
+            new Tickets() { Department= "Help Desk" },
+            new Tickets() { Department= "Cloud Services" },
+            new Tickets() { Department= "DevOps" },
+        };
+    
+    /// <summary>
+    /// Configures the dropdown editor used by the Department column via EditorSettings="@DepartmentDropDownParams".
+    /// </summary>
+    private IEditorSettings DepartmentDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = DepartmentCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Provides a list of requester names used as the data source for the Requested By dropdown editor in the grid.
+    /// </summary>
+    private static List<Tickets> CreatedByCustomData = new List<Tickets> {
+            new Tickets() { CreatedBy= "Alice Smith" },
+            new Tickets() { CreatedBy= "Bob Johnson" },
+            new Tickets() { CreatedBy= "David Brown" },
+            new Tickets() { CreatedBy= "Emily White" },
+            new Tickets() { CreatedBy= "Nancy Wilson" },
+            new Tickets() { CreatedBy= "Robert Harris" },
+            new Tickets() { CreatedBy= "System Monitor" },
+            new Tickets() { CreatedBy= "Reception Desk" },
+            new Tickets() { CreatedBy= "User Support" },
+            new Tickets() { CreatedBy= "Admin User" },
+            new Tickets() { CreatedBy= "John Doe" },
+            new Tickets() { CreatedBy= "Sarah Lee" },
+            new Tickets() { CreatedBy= "Help Desk" },
+            new Tickets() { CreatedBy= "IT Operations" },
+        };
+    
+    /// <summary>
+    /// Configures the dropdown editor used by the Requested By column via EditorSettings="@CreatedByDropDownParams".
+    /// </summary>
+    private IEditorSettings CreatedByDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CreatedByCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Provides a list of agent names used as the data source for the Agent dropdown editor in the grid.
+    /// </summary>
+    private static List<Tickets> AssigneeCustomData = new List<Tickets> {
+            new Tickets() { Assignee= "John Doe" },
+            new Tickets() { Assignee= "Emily White" },
+            new Tickets() { Assignee= "James Miller" },
+            new Tickets() { Assignee= "Lisa Taylor" },
+            new Tickets() { Assignee= "Susan Clark" },
+            new Tickets() { Assignee= "Sarah Lee" },
+            new Tickets() { Assignee= "Robert Harris" },
+            new Tickets() { Assignee= "Mike Green" },
+            new Tickets() { Assignee= "Nancy Wilson" },
+            new Tickets() { Assignee= "David Brown" },
+        };
+    
+    /// <summary>
+    /// Configures the dropdown editor used by the Agent column via EditorSettings="@AssigneeDropDownParams".
+    /// </summary>
+    private IEditorSettings AssigneeDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = AssigneeCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Returns a CSS class name based on ticket status to style the Status column template.
+    /// </summary>
+    private string GetStatusClass(Tickets data)
+    {
+        return data.Status?.ToLower() switch
+        {
+            "open" => "status-open",
+            "inprogress" => "status-inprogress",
+            "waitingforcustomer" => "status-waiting-customer",
+            "waitingforagent" => "status-waiting-agent",
+            "resolved" => "status-resolved",
+            "closed" => "status-closed",
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// Returns the tooltip text shown for status in the Status column template.
+    /// </summary>
+    private string GetStatusDescription(Tickets data)
+    {
+        return data.Status ?? "";
+    }
+
+    /// <summary>
+    /// Returns a CSS class name based on ticket priority to style the Priority column template.
+    /// </summary>
+    private string GetPriorityClass(Tickets data)
+    {
+        return data.Priority?.ToLower() switch
+        {
+            "critical" => "priority-critical",
+            "high" => "priority-high",
+            "medium" => "priority-medium",
+            "low" => "priority-low",
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// Returns the tooltip text shown for priority in the Priority column template.
+    /// </summary>
+    private string GetPriorityDescription(Tickets data)
+    {
+        return data.Priority ?? "";
+    }
+
+    /// <summary>
+    /// Returns a CSS class name based on ticket category to style the Category column template.
+    /// </summary>
+    private string GetCategoryClass(Tickets data)
+    {
+        return data.Category?.ToLower() switch
+        {
+            "network issue" => "category-network",
+            "network" => "category-network",
+            "performance" => "category-performance",
+            "vpn" => "category-vpn",
+            "hardware" => "category-hardware",
+            "server issue" => "category-server",
+            "server" => "category-server",
+            "security" => "category-security",
+            "connectivity" => "category-connectivity",
+            "software" => "category-software",
+            "email" => "category-email",
+            "access" => "category-access",
+            "backup" => "category-backup",
+            "database" => "category-database",
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// Returns a CSS class name indicating if the response due date is exceeded for the Response Due column.
+    /// </summary>
+    private string GetResponseDueClass(Tickets data)
+    {
+        if (!data.ResponseDue.HasValue)
+            return "response-due";
+
+        var isExceeded = data.ResponseDue < DateTime.Now;
+        return isExceeded ? "response-due response-due-exceeded" : "response-due";
+    }
+
+    /// <summary>
+    /// Returns the tooltip text for the response due date in the Response Due column template.
+    /// </summary>
+    private string GetResponseDueTooltip(Tickets data)
+    {
+        if (!data.ResponseDue.HasValue)
+            return "";
+
+        var isExceeded = data.ResponseDue < DateTime.Now;
+        return isExceeded ? "Response due date has been exceeded" : data.ResponseDue.Value.ToString("MMM d, yyyy, h:mm tt");
+    }
+}
