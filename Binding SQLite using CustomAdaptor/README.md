@@ -31,7 +31,8 @@ This repository demonstrates a production-ready pattern for binding **SQLite Ser
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd Asset
+   cd "Binding SQLite using CustomAdaptor"
+   cd "Blazor Web app/Grid_SQLite"
    ```
 
 2. **Create the database and table**
