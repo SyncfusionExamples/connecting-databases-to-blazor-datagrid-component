@@ -31,7 +31,8 @@ This repository demonstrates a production-ready pattern for binding **MySQL Serv
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd Transaction
+   cd "Binding MySQL database using CustomAdaptor"
+   cd "Blazor Web app/Grid_MySQL"
    ```
 
 2. **Create the database and table**
