@@ -1,0 +1,119 @@
+:host {
+    display: block;
+    padding: 1rem;
+}
+
+/* STATUS - PURCHASE ORDER */
+.status-text {
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.status-pending {
+    color: #0d6efd;
+}
+
+.status-approved {
+    color: #059669;
+}
+
+.status-ordered {
+    color: #d97706;
+}
+
+.status-received {
+    color: #047857;
+}
+
+.status-cancelled {
+    color: #b91c1c;
+}
+
+.status-completed {
+    color: #7c3aed;
+}
+
+.status-purchase-id {
+    color: #4097ee;
+    position: relative;
+    text-decoration: none;
+    transition: color 0.3s ease-in-out;
+}
+
+.status-purchase-id::before {
+    content: "";
+    position: absolute;
+    top: 100%;
+    width: 100%;
+    height: 3px;
+    background-color: #94a8e1;
+    transform: scaleX(0);
+    transition: transform 0.3s ease-in-out;
+}
+
+.status-purchase-id:hover {
+    color: #2d26c6;
+    cursor: pointer;
+}
+
+.status-purchase-id:hover::before {
+    transform: scaleX(1);
+}
+
+
+/* CATEGORY CHIP */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 1rem;
+    min-height: 1.8rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1;
+    white-space: nowrap;
+    background-color: var(--chip-color, #4b5563);
+}
+
+.chip.category-electronics {
+    --chip-color: #4A7C59;
+}
+
+.chip.category-office {
+    --chip-color: #68B0AB;
+}
+
+.chip.category-hardware {
+    --chip-color: #8E443D;
+}
+
+.chip.category-software {
+    --chip-color: #AE76A6;
+}
+
+.chip.category-furniture {
+    --chip-color: #56638A;
+}
+
+.chip.category-networking {
+    --chip-color: #3C6997;
+}
+
+.chip.category-storage {
+    --chip-color: #25A18E;
+}
+
+.chip.category-accessories {
+    --chip-color: #0582CA;
+}
+
+.chip.category-services {
+    --chip-color: #320A28;
+}
+
+.chip.category-other {
+    --chip-color: #093A3E;
+}
+
