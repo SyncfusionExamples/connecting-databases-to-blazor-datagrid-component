@@ -1,0 +1,274 @@
+@page "/"
+@rendermode InteractiveServer
+@using System.Collections
+@using Grid_SQLite.Data
+@using Syncfusion.Blazor.Data
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.DropDowns
+@inject AssetRepository AssetService
+
+<SfGrid TValue="Asset" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" AllowPaging="true"
+    Height="500px" Width="100%" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
+    <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+    <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+    <GridEditSettings AllowEditing="true" AllowAdding="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+    <GridPageSettings PageSize="20"></GridPageSettings>
+        
+    <GridColumns>
+        <GridColumn Field=@nameof(Asset.Id) IsPrimaryKey="true" ShowInColumnChooser="false" ShowColumnMenu="false"></GridColumn>
+        <GridColumn Field="@nameof(Asset.AssetID)" HeaderText="Asset ID" Width="120" TextAlign="TextAlign.Left" AllowAdding="false" AllowEditing="false">
+            <Template>
+                @{
+                    var data = (Asset)context;
+                }
+                <a class="status-text status-ticket-id">
+                    @data.AssetID
+                </a>
+            </Template>
+        </GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.AssetName)" HeaderText="Asset Name" Width="180" TextAlign="TextAlign.Left" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.AssetType)" HeaderText="Type" Width="130" TextAlign="TextAlign.Left" ValidationRules="@(new ValidationRules { Required = true })" AllowEditing="false"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.Model)" HeaderText="Model" Width="150" ValidationRules="@(new ValidationRules { Required = true })" TextAlign="TextAlign.Left"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.SerialNumber)" HeaderText="Serial Number" Width="160" TextAlign="TextAlign.Left" AllowAdding="false" AllowEditing="false"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.InvoiceID)" HeaderText="Invoice ID" Width="130" TextAlign="TextAlign.Left"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.AssignedTo)" HeaderText="Assigned To" Width="150" TextAlign="TextAlign.Left"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.Department)" HeaderText="Department" Width="130" TextAlign="TextAlign.Left" EditType="EditType.DropDownEdit" EditorSettings="@DepartmentDropDownParams" />
+            
+        <GridColumn Field="@nameof(Asset.PurchaseDate)" HeaderText="Purchase Date" Width="140" TextAlign="TextAlign.Center" ValidationRules="@(new ValidationRules { Required = true })" Format="yyyy-MM-dd" Type="ColumnType.Date" EditType="EditType.DatePickerEdit" AllowEditing="false"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.PurchaseCost)" HeaderText="Cost" Width="120" TextAlign="TextAlign.Right" Format="C0" EditType="EditType.NumericEdit"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.WarrantyExpiry)" HeaderText="Warranty Expiry" Width="150" TextAlign="TextAlign.Center" Format="yyyy-MM-dd" Type="ColumnType.Date" EditType="EditType.DatePickerEdit"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.Condition)" HeaderText="Condition" Width="120" TextAlign="TextAlign.Center" EditType="EditType.DropDownEdit" EditorSettings="@ConditionDropDownParams">
+            <Template>
+                @{
+                    var asset = context as Asset;
+                    var badgeClass = asset?.Condition switch
+                    {
+                        "New" => "badge bg-success",
+                        "Good" => "badge bg-primary",
+                        "Fair" => "badge bg-warning text-dark",
+                        "Poor" => "badge bg-danger",
+                        _ => "badge bg-secondary"
+                    };
+                }
+                <span class="@badgeClass">@asset?.Condition</span>
+            </Template>
+        </GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.LastMaintenance)" HeaderText="Last Maintenance" Width="150" TextAlign="TextAlign.Center" Format="yyyy-MM-dd" Type="ColumnType.Date" EditType="EditType.DatePickerEdit"></GridColumn>
+            
+        <GridColumn Field="@nameof(Asset.Status)" HeaderText="Status" Width="120" TextAlign="TextAlign.Center" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams">
+            <Template>
+                @{
+                    var asset = context as Asset;
+                    var badgeClass = asset?.Status switch
+                    {
+                        "Active" => "badge bg-success",
+                        "In Repair" => "badge bg-warning text-dark",
+                        "Retired" => "badge bg-secondary",
+                        "Available" => "badge bg-info",
+                        _ => "badge bg-secondary"
+                    };
+                }
+                <span class="@badgeClass">@asset?.Status</span>
+            </Template>
+        </GridColumn>
+    </GridColumns>
+
+</SfGrid>
+
+
+@code {
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        _customAdaptor = new CustomAdaptor { AssetService = AssetService };
+    }
+
+    /// <summary>
+    /// CustomAdaptor class to handle grid data operations with SQLite using Entity Framework
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static AssetRepository? _assetService { get; set; }
+        public AssetRepository? AssetService
+        {
+            get => _assetService;
+            set => _assetService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            IEnumerable dataSource = await _assetService!.GetAssetsAsync();
+
+            // Handling Search
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+            }
+
+            // Handling Filtering
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+
+            // Handling Sorting
+            if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+            {
+                dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+            }
+
+            int totalRecordsCount = dataSource.Cast<Asset>().Count();
+
+            // Handling Paging
+            if (dataManagerRequest.Skip != 0)
+            {
+                dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                //Add custom logic here if needed and remove above method
+            }
+
+            if (dataManagerRequest.Take != 0)
+            {
+                dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                //Add custom logic here if needed and remove above method
+            }
+
+            //Handling Groping
+            if (dataManagerRequest.Group != null)
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    dataSource = DataUtil.Group<Asset>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    //Add custom logic here if needed and remove above method
+                }
+            }
+
+            return dataManagerRequest.RequiresCounts
+                ? new DataResult() { Result = dataSource, Count = totalRecordsCount }
+                : (object)dataSource;
+        }
+
+        public override async Task<object> InsertAsync(DataManager dataManager, object value, string? key)
+        {
+            await _assetService!.AddAssetAsync(value as Asset);
+            return value;
+        }
+
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            await _assetService!.UpdateAssetAsync(value as Asset);
+            return value;
+        }
+
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            await _assetService!.RemoveAssetAsync(value as int?);
+            return value;
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            if (changedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Asset>)changedRecords)
+                {
+                    await _assetService!.UpdateAssetAsync(record as Asset);
+                }
+            }
+            if (addedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Asset>)addedRecords)
+                {
+                    await _assetService!.AddAssetAsync(record as Asset);
+                }
+            }
+            if (deletedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Asset>)deletedRecords)
+                {
+                    await _assetService!.RemoveAssetAsync((record as Asset)?.Id);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of Departments options used as a data source for the Department editor in the grid.
+    /// </summary>
+    public static List<Asset> CustomDepartments = new List<Asset>
+    {
+        new Asset { Department = "IT" },
+        new Asset { Department = "Finance" },
+        new Asset { Department = "Marketing" },
+        new Asset { Department = "HR" },
+        new Asset { Department = "Design" },
+        new Asset { Department = "Sales" },
+        new Asset { Department = "Operations" },
+        new Asset { Department = "Executive" },
+        new Asset { Department = "Training" },
+        new Asset { Department = "Engineering" },
+        new Asset { Department = "Legal" },
+        new Asset { Department = "Customer Support" },
+    };
+
+    /// <summary>
+    /// Provides a list of Conditions options used as a data source for the Conditions editor in the grid.
+    /// </summary>
+    public static List<Asset> CustomConditions = new List<Asset>
+    {
+        new Asset { Condition = "New" },
+        new Asset { Condition = "Good" },
+        new Asset { Condition = "Fair" },
+        new Asset { Condition = "Poor" }
+    };
+
+    /// <summary>
+    /// Provides a list of Status options used as a data source for the Status editor in the grid.
+    /// </summary>
+    public static List<Asset> CustomStatuses = new List<Asset>
+    {
+        new Asset { Status = "Active" },
+        new Asset { Status = "In Repair" },
+        new Asset { Status = "Retired" },
+        new Asset { Status = "Available" }
+    };
+
+
+    /// <summary>
+    /// Dropdown editor settings configured with Department options for the Department column in grid edit mode.
+    /// </summary>
+    public IEditorSettings DepartmentDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomDepartments, Query = new Syncfusion.Blazor.Data.Query() }
+    };
+
+
+    /// <summary>
+    /// Dropdown editor settings configured with Condition options for the Condition column in grid edit mode.
+    /// </summary>
+    public IEditorSettings ConditionDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomConditions, Query = new Syncfusion.Blazor.Data.Query() }
+    };
+
+
+    /// <summary>
+    /// Dropdown editor settings configured with Status options for the Status column in grid edit mode.
+    /// </summary>
+    public IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatuses, Query = new Syncfusion.Blazor.Data.Query() }
+    };
+}
