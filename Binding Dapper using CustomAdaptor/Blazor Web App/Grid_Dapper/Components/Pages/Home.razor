@@ -25,7 +25,7 @@
                 
                     <GridColumn Field=@nameof(Reservation.GuestName) HeaderText="Guest Name" Width="160" TextAlign="TextAlign.Left" ValidationRules="@(new ValidationRules { Required = true, MinLength = 3 })"></GridColumn>
                 
-                    <GridColumn Field=@nameof(Reservation.GuestEmail) HeaderText="Email" Width="180" TextAlign="TextAlign.Left"></GridColumn>
+                    <GridColumn Field=@nameof(Reservation.GuestEmail) HeaderText="Email" Width="200" TextAlign="TextAlign.Left"></GridColumn>
                 
                     <GridColumn Field=@nameof(Reservation.CheckInDate) HeaderText="Check-In" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit"></GridColumn>
                 
@@ -40,11 +40,11 @@
                         </Template>
                     </GridColumn>
                 
-                    <GridColumn Field=@nameof(Reservation.RoomNumber) HeaderText="Room No" Width="100" TextAlign="TextAlign.Center" EditType="EditType.DefaultEdit"></GridColumn>
+                    <GridColumn Field=@nameof(Reservation.RoomNumber) HeaderText="Room No" Width="120" TextAlign="TextAlign.Center" EditType="EditType.DefaultEdit"></GridColumn>
                 
-                    <GridColumn Field=@nameof(Reservation.AmountPerDay) HeaderText="Amount/Day" Width="120" TextAlign="TextAlign.Right" Type="ColumnType.Decimal" Format="C2" EditType="EditType.NumericEdit"></GridColumn>
+                    <GridColumn Field=@nameof(Reservation.AmountPerDay) HeaderText="Amount/Day" Width="140" TextAlign="TextAlign.Center" Type="ColumnType.Decimal" Format="C2" EditType="EditType.NumericEdit"></GridColumn>
                 
-                    <GridColumn Field=@nameof(Reservation.NoOfDays) HeaderText="No.Of.Days" Width="100" TextAlign="TextAlign.Center" Type="ColumnType.Integer" AllowAdding="false" AllowEditing="false"></GridColumn>
+                    <GridColumn Field=@nameof(Reservation.NoOfDays) HeaderText="No.Of.Days" Width="140" TextAlign="TextAlign.Center" Type="ColumnType.Integer" AllowAdding="false" AllowEditing="false"></GridColumn>
                 
                     <GridColumn Field=@nameof(Reservation.TotalAmount) HeaderText="Total Amount" Width="140" TextAlign="TextAlign.Right" Type="ColumnType.Decimal" Format="C2" AllowEditing="false">
                         <Template>
@@ -96,7 +96,7 @@
     public class CustomAdaptor : DataAdaptor
     {
         public static ReservationRepository? _reservationRepository;
-        
+
         public ReservationRepository? ReservationRepository 
         { 
             get => _reservationRepository; 
@@ -110,7 +110,7 @@
         {
             try
             {
-                IEnumerable<Reservation> dataSource = await _reservationRepository.GetReservationsAsync();
+                IEnumerable dataSource = await _reservationRepository!.GetReservationsAsync();
 
                 // Apply searching
                 if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
@@ -140,18 +140,6 @@
 
                 int totalRecordsCount = dataSource.Cast<Reservation>().Count();
 
-                // Handling Grouping
-                if (dataManagerRequest.Group != null)
-                {
-                    IEnumerable ResultData = dataSource.ToList();
-                    foreach (var group in dataManagerRequest.Group)
-                    {
-                        ResultData = DataUtil.Group<Reservation>(ResultData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
-                    }
-                    var dataObject = new DataResult { Result = ResultData, Count = totalRecordsCount, Aggregates = aggregates };
-                    return dataManagerRequest.RequiresCounts ? dataObject : (object)ResultData;
-                }
-
                 // Apply paging
                 if (dataManagerRequest.Skip != 0)
                 {
@@ -161,6 +149,15 @@
                 if (dataManagerRequest.Take != 0)
                 {
                     dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                }
+
+                // Handling Grouping
+                if (dataManagerRequest.Group != null)
+                {
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        dataSource = DataUtil.Group<Reservation>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
                 }
 
                 return dataManagerRequest.RequiresCounts 
