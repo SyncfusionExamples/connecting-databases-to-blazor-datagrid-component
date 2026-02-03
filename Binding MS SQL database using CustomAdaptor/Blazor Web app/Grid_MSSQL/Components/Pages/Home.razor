@@ -118,7 +118,7 @@
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
         public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
         {
-            IEnumerable<Tickets> dataSource = await _ticketService!.GetTicketsDataAsync();
+            IEnumerable dataSource = await _ticketService!.GetTicketsDataAsync();
             
             // Handling Searching in CustomAdaptor.
             if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
@@ -138,27 +138,7 @@
                 dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
             }
 
-            // Handling Aggregates
-            IDictionary<string, object>? aggregates = null;
-            if (dataManagerRequest.Aggregates != null)
-            {
-                aggregates = DataUtil.PerformAggregation(dataSource, dataManagerRequest.Aggregates);
-            }
-
             int totalRecordsCount = dataSource.Cast<Tickets>().Count();
-            DataResult dataObject = new DataResult();
-            // Handling Group operation in CustomAdaptor.
-            if (dataManagerRequest.Group != null)
-            {
-                IEnumerable ResultData = dataSource.ToList();
-                foreach (var group in dataManagerRequest.Group)
-                {
-                    ResultData = DataUtil.Group<Tickets>(ResultData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
-                }
-                dataObject.Result = ResultData;
-                dataObject.Count = totalRecordsCount;
-                return dataManagerRequest.RequiresCounts ? dataObject : (object)ResultData;
-            }
             // Handling paging in CustomAdaptor.
             if (dataManagerRequest.Skip != 0)
             {
@@ -168,7 +148,16 @@
             {
                 dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
             }
-            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = dataSource, Count = totalRecordsCount, Aggregates = aggregates } : (object)dataSource;
+
+            // Handling Group operation in CustomAdaptor.
+            if (dataManagerRequest.Group != null)
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    dataSource = DataUtil.Group<Tickets>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                }
+            }
+            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = dataSource, Count = totalRecordsCount} : (object)dataSource;
         }
 
         /// <summary>
