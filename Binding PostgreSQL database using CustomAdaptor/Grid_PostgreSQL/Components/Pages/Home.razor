@@ -1,0 +1,468 @@
+@page "/"
+@using System.Collections
+@using Grid_PostgreSQL.Data
+@inject PurchaseOrderRepository PurchaseOrderService
+<PageTitle>Purchase Order Management System</PageTitle>
+
+<section class="bg-gray-50 dark:bg-gray-950">
+    <div class="mx-auto w-full py-12 sm:px-6 px-4">
+        <h1 class="mb-4 text-3xl font-bold">Purchase Order Management System</h1>
+        <p class="mb-3 text-gray-600">Manage and view all purchase orders from the database.</p>
+        
+        <!-- Syncfusion Blazor DataGrid Component -->
+        <SfGrid TValue="PurchaseOrder" 
+                Width="100%" 
+                Height="500px" 
+                AllowSorting="true" 
+                AllowFiltering="true" 
+                AllowPaging="true" 
+                AllowGrouping="true"
+                Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+            <GridEditSettings AllowEditing="true" AllowDeleting="true" AllowAdding="true" Mode="EditMode.Normal"></GridEditSettings>
+            <GridPageSettings PageSize="10"></GridPageSettings>
+            
+            <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+            
+            <GridColumns>
+                <!-- Primary Key Column (Hidden) -->
+                <GridColumn Field=@nameof(PurchaseOrder.PurchaseOrderId) IsPrimaryKey="true" IsIdentity="true" ShowInColumnChooser="false" ShowColumnMenu="false"></GridColumn>
+                
+                <!-- PO Number - Auto-generated, not editable -->
+                <GridColumn Field=@nameof(PurchaseOrder.PoNumber) IsIdentity="true" HeaderText="PO Number" Width="160" TextAlign="TextAlign.Right">
+                    <Template>
+                        @{
+                            var data = (PurchaseOrder)context;
+                        }
+                        <a class="status-text status-purchase-id">@data.PoNumber</a>
+                    </Template>
+                </GridColumn>
+                
+                <!-- Vendor ID - Required -->
+                <GridColumn Field=@nameof(PurchaseOrder.VendorID) HeaderText="Vendor ID" Width="180" EditType="EditType.DropDownEdit" EditorSettings="@VendorDropDownParams" ValidationRules="@(new ValidationRules{ Required=true })"></GridColumn>
+                
+                <!-- Item Name - Required, Max 200 characters -->
+                <GridColumn Field=@nameof(PurchaseOrder.ItemName) HeaderText="Item Name" Width="240" ClipMode="ClipMode.EllipsisWithTooltip" EditType="EditType.DefaultEdit" ValidationRules="@(new ValidationRules{ Required=true, MaxLength=200 })"></GridColumn>
+                
+                <!-- Item Category - Optional -->
+                <GridColumn Field=@nameof(PurchaseOrder.ItemCategory) HeaderText="Category" Width="160" EditType="EditType.DropDownEdit" EditorSettings="@CategoryDropDownParams">
+                    <Template>
+                        @{
+                            var data = (PurchaseOrder)context;
+                        }
+                        <span class="chip @GetCategoryClass(data)">@data.ItemCategory</span>
+                    </Template>
+                </GridColumn>
+                
+                <!-- Quantity - Required, Minimum 1 -->
+                <GridColumn Field=@nameof(PurchaseOrder.Quantity) HeaderText="Qty" Width="120" TextAlign="TextAlign.Right" EditType="EditType.NumericEdit" ValidationRules="@(new ValidationRules{ Required=true, Min=1 })"></GridColumn>
+                
+                <!-- Unit Price - Required, Minimum 0.01 -->
+                <GridColumn Field=@nameof(PurchaseOrder.UnitPrice) HeaderText="Unit Price" Width="160" TextAlign="TextAlign.Right" Type="ColumnType.Decimal" Format="C2" EditType="EditType.NumericEdit" ValidationRules="@(new ValidationRules{ Required=true })"></GridColumn>
+                
+                <!-- Total Amount - Auto-calculated, Read-only -->
+                <GridColumn Field=@nameof(PurchaseOrder.TotalAmount) HeaderText="Total Amount" Width="180" TextAlign="TextAlign.Right" Type="ColumnType.Decimal" Format="C2" AllowAdding="false" AllowEditing="false">
+                    <Template>
+                        @{
+                            var data = (PurchaseOrder)context;
+                        }
+                        <span class="total-amount">@(data.TotalAmount?.ToString("C2") ?? "0.00")</span>
+                    </Template>
+                </GridColumn>
+                
+                <!-- Status - Required -->
+                <GridColumn Field=@nameof(PurchaseOrder.Status) HeaderText="Status" Width="160" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams" ValidationRules="@(new ValidationRules{ Required=true })">
+                    <Template>
+                        @{
+                            var data = (PurchaseOrder)context;
+                        }
+                        <span class="status-text @GetStatusClass(data)">@data.Status</span>
+                    </Template>
+                </GridColumn>
+                
+                <!-- Ordered By - Required -->
+                <GridColumn Field=@nameof(PurchaseOrder.OrderedBy) HeaderText="Ordered By" Width="180" EditType="EditType.DropDownEdit" EditorSettings="@OrderedByDropDownParams" ValidationRules="@(new ValidationRules{ Required=true })"></GridColumn>
+                
+                <!-- Approved By - Optional -->
+                <GridColumn Field=@nameof(PurchaseOrder.ApprovedBy) HeaderText="Approved By" Width="180" EditType="EditType.DropDownEdit" EditorSettings="@ApprovedByDropDownParams"></GridColumn>
+                
+                <!-- Order Date - Required -->
+                <GridColumn Field=@nameof(PurchaseOrder.OrderDate) HeaderText="Order Date" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit" ValidationRules="@(new ValidationRules{ Required=true })"></GridColumn>
+                
+                <!-- Expected Delivery Date - Optional -->
+                <GridColumn Field=@nameof(PurchaseOrder.ExpectedDeliveryDate) HeaderText="Expected Delivery" Width="180" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit"></GridColumn>
+                
+                <!-- Created At - Auto-generated, Read-only -->
+                <GridColumn Field=@nameof(PurchaseOrder.CreatedAt) HeaderText="Created On" Width="180" Type="ColumnType.DateTime" Format="MMM d, yyyy, h:mm tt" AllowEditing="false"></GridColumn>
+                
+                <!-- Updated At - Auto-generated, Read-only -->
+                <GridColumn Field=@nameof(PurchaseOrder.UpdatedAt) HeaderText="Last Modified" Width="180" Type="ColumnType.DateTime" Format="MMM d, yyyy, h:mm tt" AllowEditing="false"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</section>
+
+@code {
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected PurchaseOrderRepository
+        _customAdaptor = new CustomAdaptor { PurchaseOrderService = PurchaseOrderService };
+    }
+
+    /// <summary>
+    /// CustomAdaptor class bridges DataGrid interactions with database operations.
+    /// This adaptor handles all data retrieval and manipulation for the DataGrid.
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static PurchaseOrderRepository? _purchaseOrderService { get; set; }
+
+        public PurchaseOrderRepository? PurchaseOrderService
+        {
+            get => _purchaseOrderService;
+            set => _purchaseOrderService = value;
+        }
+
+        /// <summary>
+        /// ReadAsync retrieves records from the database and applies data operations.
+        /// This method executes when the grid initializes and when filtering, searching, sorting, or paging occurs.
+        /// Handles Search, Filter, Sort, Group, and Paging operations.
+        /// </summary>
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
+        {
+            try
+            {
+                // Fetch all purchase orders from the database
+                IEnumerable dataSource = await _purchaseOrderService!.GetPurchaseOrdersDataAsync();
+
+                // Apply search operation if search criteria exists
+                if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+                }
+
+                // Apply filter operation if filter criteria exists
+                if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+                {
+                    dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+                }
+
+                // Apply sort operation if sort criteria exists
+                if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+                }
+
+                int totalRecordsCount = dataSource.Cast<PurchaseOrder>().Count();
+                // Apply paging skip operation
+                if (dataManagerRequest.Skip != 0)
+                {
+                    dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                }
+                if (dataManagerRequest.Take != 0)
+                {
+                    dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                }
+
+                // Apply grouping operation if group criteria exists
+                if (dataManagerRequest.Group != null)
+                {
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        dataSource = DataUtil.Group<PurchaseOrder>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
+                }
+
+                // Return the result with total count for pagination metadata
+                return dataManagerRequest.RequiresCounts
+                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount}
+                    : (object)dataSource;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while retrieving data: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// InsertAsync adds a new purchase order to the database.
+        /// This method is called when the user clicks "Add" and saves a new record.
+        /// </summary>
+        public override async Task<object> InsertAsync(DataManager DataManager, object value, string key)
+        {
+            try
+            {
+                if (value is PurchaseOrder purchaseOrder)
+                {
+                    await _purchaseOrderService!.AddPurchaseOrderAsync(purchaseOrder);
+                }
+                return value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while inserting data: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// UpdateAsync modifies an existing purchase order in the database.
+        /// This method is called when the user edits a record and clicks "Update".
+        /// </summary>
+        public override async Task<object> UpdateAsync(DataManager DataManager, object value, string keyField, string key)
+        {
+            try
+            {
+                if (value is PurchaseOrder purchaseOrder)
+                {
+                    await _purchaseOrderService!.UpdatePurchaseOrderAsync(purchaseOrder);
+                }
+                return value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while updating data: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// RemoveAsync deletes a purchase order from the database.
+        /// This method is called when the user clicks "Delete" on a record.
+        /// </summary>
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            try
+            {
+                // Handle different value types
+                int? recordId = null;
+                if (value is int intValue)
+                {
+                    recordId = intValue;
+                }
+                else if (value is PurchaseOrder purchaseOrder)
+                {
+                    recordId = purchaseOrder.PurchaseOrderId;
+                }
+                else if (int.TryParse(value?.ToString(), out int parsedValue))
+                {
+                    recordId = parsedValue;
+                }
+
+                if (recordId.HasValue && recordId.Value > 0)
+                {
+                    await _purchaseOrderService!.RemovePurchaseOrderAsync(recordId);
+                }
+                return value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while deleting data: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// BatchUpdateAsync handles bulk operations (Insert, Update, Delete) in a single request.
+        /// This method is called when the grid is in Batch Edit mode and the user saves multiple changes.
+        /// </summary>
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changed, object added, object deleted, string keyField, string key, int? dropIndex)
+        {
+            try
+            {
+                // Process updated records
+                if (changed != null)
+                {
+                    foreach (var record in (IEnumerable<PurchaseOrder>)changed)
+                    {
+                        await _purchaseOrderService!.UpdatePurchaseOrderAsync(record);
+                    }
+                }
+
+                // Process newly added records
+                if (added != null)
+                {
+                    foreach (var record in (IEnumerable<PurchaseOrder>)added)
+                    {
+                        await _purchaseOrderService!.AddPurchaseOrderAsync(record);
+                    }
+                }
+
+                // Process deleted records
+                if (deleted != null)
+                {
+                    foreach (var record in (IEnumerable<PurchaseOrder>)deleted)
+                    {
+                        await _purchaseOrderService!.RemovePurchaseOrderAsync(record.PurchaseOrderId);
+                    }
+                }
+                return key;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while performing batch operations: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of status options used as the data source for the Status dropdown editor.
+    /// </summary>
+    private static List<PurchaseOrder> StatusCustomData = new List<PurchaseOrder> {
+        new PurchaseOrder() { Status = "Pending" },
+        new PurchaseOrder() { Status = "Approved" },
+        new PurchaseOrder() { Status = "Ordered" },
+        new PurchaseOrder() { Status = "Received" },
+        new PurchaseOrder() { Status = "Cancelled" },
+        new PurchaseOrder() { Status = "Completed" },
+    };
+
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() 
+        { 
+            DataSource = StatusCustomData, 
+            Query = new Syncfusion.Blazor.Data.Query(), 
+            ShowClearButton = true, 
+            AllowFiltering = true 
+        }
+    };
+
+    /// <summary>
+    /// Provides a list of item category options used as the data source for the Category dropdown editor.
+    /// </summary>
+    private static List<PurchaseOrder> CategoryCustomData = new List<PurchaseOrder> {
+        new PurchaseOrder() { ItemCategory = "Electronics" },
+        new PurchaseOrder() { ItemCategory = "Office Supplies" },
+        new PurchaseOrder() { ItemCategory = "Hardware" },
+        new PurchaseOrder() { ItemCategory = "Software" },
+        new PurchaseOrder() { ItemCategory = "Furniture" },
+        new PurchaseOrder() { ItemCategory = "Networking" },
+        new PurchaseOrder() { ItemCategory = "Storage" },
+        new PurchaseOrder() { ItemCategory = "Accessories" },
+        new PurchaseOrder() { ItemCategory = "Services" },
+        new PurchaseOrder() { ItemCategory = "Other" },
+    };
+
+    private IEditorSettings CategoryDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() 
+        { 
+            DataSource = CategoryCustomData, 
+            Query = new Syncfusion.Blazor.Data.Query(), 
+            ShowClearButton = true, 
+            AllowFiltering = true 
+        }
+    };
+
+    /// <summary>
+    /// Provides a list of vendor IDs used as the data source for the Vendor dropdown editor.
+    /// </summary>
+    private static List<PurchaseOrder> VendorCustomData = new List<PurchaseOrder> {
+        new PurchaseOrder() { VendorID = "VEN-9001" },
+        new PurchaseOrder() { VendorID = "VEN-9002" },
+        new PurchaseOrder() { VendorID = "VEN-9003" },
+        new PurchaseOrder() { VendorID = "VEN-9004" },
+        new PurchaseOrder() { VendorID = "VEN-9005" },
+        new PurchaseOrder() { VendorID = "VEN-9006" },
+        new PurchaseOrder() { VendorID = "VEN-9007" },
+        new PurchaseOrder() { VendorID = "VEN-9008" },
+    };
+
+    private IEditorSettings VendorDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() 
+        { 
+            DataSource = VendorCustomData, 
+            Query = new Syncfusion.Blazor.Data.Query(), 
+            ShowClearButton = true, 
+            AllowFiltering = true 
+        }
+    };
+
+    /// <summary>
+    /// Provides a list of employee names used as the data source for the OrderedBy dropdown editor.
+    /// </summary>
+    private static List<PurchaseOrder> OrderedByCustomData = new List<PurchaseOrder> {
+        new PurchaseOrder() { OrderedBy = "Alice Johnson" },
+        new PurchaseOrder() { OrderedBy = "Bob Smith" },
+        new PurchaseOrder() { OrderedBy = "Carol Davis" },
+        new PurchaseOrder() { OrderedBy = "David Wilson" },
+        new PurchaseOrder() { OrderedBy = "Emily Brown" },
+        new PurchaseOrder() { OrderedBy = "Frank Miller" },
+        new PurchaseOrder() { OrderedBy = "Grace Lee" },
+        new PurchaseOrder() { OrderedBy = "Henry Taylor" },
+        new PurchaseOrder() { OrderedBy = "Iris Martinez" },
+        new PurchaseOrder() { OrderedBy = "Jack Anderson" },
+    };
+
+    private IEditorSettings OrderedByDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() 
+        { 
+            DataSource = OrderedByCustomData, 
+            Query = new Syncfusion.Blazor.Data.Query(), 
+            ShowClearButton = true, 
+            AllowFiltering = true 
+        }
+    };
+
+    /// <summary>
+    /// Provides a list of manager names used as the data source for the ApprovedBy dropdown editor.
+    /// </summary>
+    private static List<PurchaseOrder> ApprovedByCustomData = new List<PurchaseOrder> {
+        new PurchaseOrder() { ApprovedBy = "Alice Johnson" },
+        new PurchaseOrder() { ApprovedBy = "Bob Smith" },
+        new PurchaseOrder() { ApprovedBy = "Carol Davis" },
+        new PurchaseOrder() { ApprovedBy = "Iris Martinez" },
+        new PurchaseOrder() { ApprovedBy = "Jack Anderson" },
+    };
+
+    private IEditorSettings ApprovedByDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() 
+        { 
+            DataSource = ApprovedByCustomData, 
+            Query = new Syncfusion.Blazor.Data.Query(), 
+            ShowClearButton = true, 
+            AllowFiltering = true 
+        }
+    };
+
+    /// <summary>
+    /// Returns a CSS class name based on purchase order status to style the Status column template.
+    /// </summary>
+    private string GetStatusClass(PurchaseOrder data)
+    {
+        return data.Status?.ToLower() switch
+        {
+            "pending" => "status-pending",
+            "approved" => "status-approved",
+            "ordered" => "status-ordered",
+            "received" => "status-received",
+            "cancelled" => "status-cancelled",
+            "completed" => "status-completed",
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// Returns a CSS class name based on item category to style the Category column template.
+    /// </summary>
+    private string GetCategoryClass(PurchaseOrder data)
+    {
+        return data.ItemCategory?.ToLower() switch
+        {
+            "electronics" => "category-electronics",
+            "office supplies" => "category-office",
+            "hardware" => "category-hardware",
+            "software" => "category-software",
+            "furniture" => "category-furniture",
+            "networking" => "category-networking",
+            "storage" => "category-storage",
+            "accessories" => "category-accessories",
+            "services" => "category-services",
+            "other" => "category-other",
+            _ => ""
+        };
+    }
+}
