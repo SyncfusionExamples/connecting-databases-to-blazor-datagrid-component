@@ -1,0 +1,319 @@
+@page "/"
+@using System.Collections
+@using Grid_Dapper.Data
+@inject ReservationRepository ReservationService
+
+<section class="bg-gray-50 dark:bg-gray-950">
+    <div class="mx-auto w-full py-12 sm:px-6 px-4">
+        <SfGrid TValue="Reservation" Width="100%" Height="500px" AllowSorting="true" AllowFiltering="true" EnableVirtualization="false" AllowGrouping="true"
+            Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
+                <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                <GridEditSettings AllowEditing="true" AllowDeleting="true" AllowAdding="true" Mode="EditMode.Normal"></GridEditSettings>
+            <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+                <GridColumns>
+                    <GridColumn Field=@nameof(Reservation.Id) IsPrimaryKey="true" IsIdentity="true" ShowInColumnChooser="false" ShowColumnMenu="false" Visible="false"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.ReservationId) HeaderText="Reservation ID" Width="150" TextAlign="TextAlign.Left" AllowAdding="false" AllowEditing="false">
+                        <Template>
+                            @{
+                                var data = (Reservation)context;
+                            }
+                            <span class="badge badge-info">@data.ReservationId</span>
+                        </Template>
+                    </GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.GuestName) HeaderText="Guest Name" Width="160" TextAlign="TextAlign.Left" ValidationRules="@(new ValidationRules { Required = true, MinLength = 3 })"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.GuestEmail) HeaderText="Email" Width="180" TextAlign="TextAlign.Left"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.CheckInDate) HeaderText="Check-In" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.CheckOutDate) HeaderText="Check-Out" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.RoomType) HeaderText="Room Type" Width="130" TextAlign="TextAlign.Left" EditType="EditType.DropDownEdit" EditorSettings="@RoomDropDownParams">
+                        <Template>
+                            @{
+                                var data = (Reservation)context;
+                            }
+                            <span class="badge badge-secondary">@data.RoomType</span>
+                        </Template>
+                    </GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.RoomNumber) HeaderText="Room No" Width="100" TextAlign="TextAlign.Center" EditType="EditType.DefaultEdit"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.AmountPerDay) HeaderText="Amount/Day" Width="120" TextAlign="TextAlign.Right" Type="ColumnType.Decimal" Format="C2" EditType="EditType.NumericEdit"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.NoOfDays) HeaderText="No.Of.Days" Width="100" TextAlign="TextAlign.Center" Type="ColumnType.Integer" AllowAdding="false" AllowEditing="false"></GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.TotalAmount) HeaderText="Total Amount" Width="140" TextAlign="TextAlign.Right" Type="ColumnType.Decimal" Format="C2" AllowEditing="false">
+                        <Template>
+                            @{
+                                var data = (Reservation)context;
+                            }
+                            <span class="text-success font-weight-bold">@(data.TotalAmount?.ToString("C2") ?? "N/A")</span>
+                        </Template>
+                    </GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.PaymentStatus) HeaderText="Payment" Width="110" TextAlign="TextAlign.Center" EditType="EditType.DropDownEdit" EditorSettings="@PaymentDropDownParams">
+                        <Template>
+                            @{
+                                var data = (Reservation)context;
+                            }
+                            <span class="@GetPaymentStatusClass(data.PaymentStatus)">
+                                @data.PaymentStatus
+                            </span>
+                        </Template>
+                    </GridColumn>
+                
+                    <GridColumn Field=@nameof(Reservation.ReservationStatus) HeaderText="Status" Width="120" TextAlign="TextAlign.Center" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams">
+                        <Template>
+                            @{
+                                var data = (Reservation)context;
+                            }
+                            <span class="@GetReservationStatusClass(data.ReservationStatus)">
+                                @data.ReservationStatus
+                            </span>
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+        </SfGrid>
+    </div>
+</section>
+
+@code{
+    private CustomAdaptor? _customAdaptor;
+    private string? _validationErrorMessage;
+
+    protected override void OnInitialized()
+    {
+        _customAdaptor = new CustomAdaptor { ReservationRepository = ReservationService };
+    }
+
+    /// <summary>
+    /// Custom DataAdaptor for handling CRUD operations
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static ReservationRepository? _reservationRepository;
+        
+        public ReservationRepository? ReservationRepository 
+        { 
+            get => _reservationRepository; 
+            set => _reservationRepository = value; 
+        }
+
+        /// <summary>
+        /// Reads data from the repository with filtering, sorting, and paging support
+        /// </summary>
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
+        {
+            try
+            {
+                IEnumerable<Reservation> dataSource = await _reservationRepository.GetReservationsAsync();
+
+                // Apply searching
+                if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+                }
+
+                // Apply filtering
+                if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+                {
+                    dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+                }
+
+                // Apply sorting
+                if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+                }
+
+                // Handling Aggregation
+                IDictionary<string, object>? aggregates = null;
+                if (dataManagerRequest.Aggregates != null)
+                {
+                    aggregates = DataUtil.PerformAggregation(dataSource, dataManagerRequest.Aggregates);
+                    //Add custom logic here if needed and remove above method
+                }
+
+                int totalRecordsCount = dataSource.Cast<Reservation>().Count();
+
+                // Handling Grouping
+                if (dataManagerRequest.Group != null)
+                {
+                    IEnumerable ResultData = dataSource.ToList();
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        ResultData = DataUtil.Group<Reservation>(ResultData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
+                    var dataObject = new DataResult { Result = ResultData, Count = totalRecordsCount, Aggregates = aggregates };
+                    return dataManagerRequest.RequiresCounts ? dataObject : (object)ResultData;
+                }
+
+                // Apply paging
+                if (dataManagerRequest.Skip != 0)
+                {
+                    dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                }
+
+                if (dataManagerRequest.Take != 0)
+                {
+                    dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                }
+
+                return dataManagerRequest.RequiresCounts 
+                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount } 
+                    : (object)dataSource;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading reservations: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Inserts a new reservation
+        /// </summary>
+        public override async Task<object> InsertAsync(DataManager dataManager, object value, string key)
+        {
+            await _reservationRepository!.AddReservationAsync(value as Reservation);
+            return value;
+        }
+
+        /// <summary>
+        /// Updates an existing reservation
+        /// </summary>
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string keyField, string key)
+        {    
+            await _reservationRepository!.UpdateReservationAsync(value as Reservation);
+            return value;
+        }
+
+        /// <summary>
+        /// Deletes a reservation
+        /// </summary>
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            await _reservationRepository!.RemoveReservationAsync(value as int?);
+            return value;
+        }
+
+        /// <summary>
+        /// Batch update for multiple operations
+        /// </summary>
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changed, object added, object deleted, string keyField, string key, int? dropIndex)
+        {
+            try
+            {
+                // Handle updated records
+                if (changed != null && _reservationRepository != null)
+                {
+                    foreach (var record in (IEnumerable<Reservation>)changed)
+                    {
+                        await _reservationRepository.UpdateReservationAsync(record);
+                    }
+                }
+
+                // Handle new records
+                if (added != null && _reservationRepository != null)
+                {
+                    foreach (var record in (IEnumerable<Reservation>)added)
+                    {
+                        await _reservationRepository.AddReservationAsync(record);
+                    }
+                }
+
+                // Handle deleted records
+                if (deleted != null && _reservationRepository != null)
+                {
+                    foreach (var record in (IEnumerable<Reservation>)deleted)
+                    {
+                        await _reservationRepository.RemoveReservationAsync(record.Id);
+                    }
+                }
+
+                return key;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in batch update: {ex.Message}");
+                throw;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Room Type dropdown parameters
+    /// </summary>
+    public static List<Reservation> RoomTypeCustomData = new List<Reservation> {
+            new Reservation() { RoomType = "Standard Room" },
+            new Reservation() { RoomType = "Deluxe Suite" },
+            new Reservation() { RoomType = "Family Suite" },
+            new Reservation() { RoomType = "Ocean View" },
+            new Reservation() { RoomType = "Penthouse" }
+        };
+    public IEditorSettings RoomDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = RoomTypeCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Payment Status dropdown parameters
+    /// </summary>
+    public static List<Reservation> PaymentStatusCustomData = new List<Reservation> {
+            new Reservation() { PaymentStatus = "Paid" },
+            new Reservation() { PaymentStatus = "Pending" },
+            new Reservation() { PaymentStatus = "Failed" },
+            new Reservation() { PaymentStatus = "Refunded" }
+        };
+    public IEditorSettings PaymentDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = PaymentStatusCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// Reservation Status dropdown parameters
+    /// </summary>
+    public static List<Reservation> ReservationStatusCustomData = new List<Reservation> {
+            new Reservation() { ReservationStatus = "Confirmed" },
+            new Reservation() { ReservationStatus = "Cancelled" },
+            new Reservation() { ReservationStatus = "CheckedIn" },
+            new Reservation() { ReservationStatus = "CheckedOut" }
+        };
+    public IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = ReservationStatusCustomData, Query = new Syncfusion.Blazor.Data.Query(), ShowClearButton = true, AllowFiltering = true, }
+    };
+
+    /// <summary>
+    /// CSS class for payment status styling
+    /// </summary>
+    private string GetPaymentStatusClass(string paymentStatus)
+    {
+        return paymentStatus?.ToLower() switch
+        {
+            "paid" => "payment-paid",
+            "pending" => "payment-pending",
+            "failed" => "payment-failed",
+            "refunded" => "payment-refunded",
+            _ => "payment-pending"
+        };
+    }
+
+    /// <summary>
+    /// CSS class for reservation status styling
+    /// </summary>
+    private string GetReservationStatusClass(string reservationStatus)
+    {
+        return reservationStatus?.ToLower() switch
+        {
+            "confirmed" => "status-confirmed",
+            "cancelled" => "status-cancelled",
+            "checkedin" => "status-checkedin",
+            "checkedout" => "status-checked-out",
+            _ => "status-confirmed"
+        };
+    }
+}
