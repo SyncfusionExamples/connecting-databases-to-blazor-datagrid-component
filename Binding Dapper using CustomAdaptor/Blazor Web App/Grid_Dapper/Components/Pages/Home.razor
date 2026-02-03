@@ -5,10 +5,11 @@
 
 <section class="bg-gray-50 dark:bg-gray-950">
     <div class="mx-auto w-full py-12 sm:px-6 px-4">
-        <SfGrid TValue="Reservation" Width="100%" Height="500px" AllowSorting="true" AllowFiltering="true" EnableVirtualization="false" AllowGrouping="true"
+        <SfGrid TValue="Reservation" Width="100%" Height="500px" AllowPaging="true" AllowSorting="true" AllowFiltering="true" AllowGrouping="true"
             Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
                 <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
                 <GridEditSettings AllowEditing="true" AllowDeleting="true" AllowAdding="true" Mode="EditMode.Normal"></GridEditSettings>
+                <GridPageSettings PageSize="20"></GridPageSettings>
             <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
                 <GridColumns>
                     <GridColumn Field=@nameof(Reservation.Id) IsPrimaryKey="true" IsIdentity="true" ShowInColumnChooser="false" ShowColumnMenu="false" Visible="false"></GridColumn>
@@ -26,9 +27,9 @@
                 
                     <GridColumn Field=@nameof(Reservation.GuestEmail) HeaderText="Email" Width="180" TextAlign="TextAlign.Left"></GridColumn>
                 
-                    <GridColumn Field=@nameof(Reservation.CheckInDate) HeaderText="Check-In" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                    <GridColumn Field=@nameof(Reservation.CheckInDate) HeaderText="Check-In" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit"></GridColumn>
                 
-                    <GridColumn Field=@nameof(Reservation.CheckOutDate) HeaderText="Check-Out" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                    <GridColumn Field=@nameof(Reservation.CheckOutDate) HeaderText="Check-Out" Width="140" Type="ColumnType.Date" Format="MMM d, yyyy" EditType="EditType.DatePickerEdit"></GridColumn>
                 
                     <GridColumn Field=@nameof(Reservation.RoomType) HeaderText="Room Type" Width="130" TextAlign="TextAlign.Left" EditType="EditType.DropDownEdit" EditorSettings="@RoomDropDownParams">
                         <Template>

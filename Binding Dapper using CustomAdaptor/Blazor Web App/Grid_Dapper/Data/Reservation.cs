@@ -32,12 +32,12 @@ namespace Grid_Dapper.Data
         /// <summary>
         /// Check-in date
         /// </summary>
-        public DateTime CheckInDate { get; set; }
+        public DateTime? CheckInDate { get; set; }
 
         /// <summary>
         /// Check-out date
         /// </summary>
-        public DateTime CheckOutDate { get; set; }
+        public DateTime? CheckOutDate { get; set; }
 
         /// <summary>
         /// Room type (e.g., Standard, Deluxe, Suite)

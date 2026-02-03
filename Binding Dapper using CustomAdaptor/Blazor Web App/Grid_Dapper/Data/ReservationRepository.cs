@@ -102,12 +102,17 @@ namespace Grid_Dapper.Data
                 if (string.IsNullOrEmpty(value.GuestName))
                     throw new ArgumentException("Guest name is required", nameof(value));
 
+                if (value.CheckInDate == null || value.CheckInDate == default)
+                {
+                    value.CheckInDate = DateTime.Now;
+                }
+
                 string generatedReservationId = await GenerateReservationIdAsync();
                 value.ReservationId = generatedReservationId;
 
                 if (value.CheckInDate != default && value.CheckOutDate != default)
                 {
-                    value.NoOfDays = CalculateNoOfDays(value.CheckInDate, value.CheckOutDate);
+                    value.NoOfDays = CalculateNoOfDays((DateTime)value.CheckInDate, (DateTime)value.CheckOutDate);
                 }
 
                 if (value.AmountPerDay.HasValue && value.NoOfDays.HasValue && value.NoOfDays > 0)
@@ -161,7 +166,7 @@ namespace Grid_Dapper.Data
 
                 if (value.CheckInDate != default && value.CheckOutDate != default)
                 {
-                    value.NoOfDays = CalculateNoOfDays(value.CheckInDate, value.CheckOutDate);
+                    value.NoOfDays = CalculateNoOfDays((DateTime)value.CheckInDate, (DateTime)value.CheckOutDate);
                 }
 
                 if (value.AmountPerDay.HasValue && value.NoOfDays.HasValue && value.NoOfDays > 0)
