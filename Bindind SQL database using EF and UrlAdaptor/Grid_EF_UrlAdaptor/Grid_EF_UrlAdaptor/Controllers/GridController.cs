@@ -2,6 +2,7 @@ using Grid_EF_UrlAdaptor.Data;
 using Microsoft.AspNetCore.Mvc;
 using Syncfusion.Blazor;
 using Syncfusion.Blazor.Data;
+using System.Collections;
 using System.Text.Json.Serialization;
 
 namespace Grid_EF_UrlAdaptor.Controllers
@@ -25,7 +26,7 @@ namespace Grid_EF_UrlAdaptor.Controllers
         {
             try
             {
-                IEnumerable<Order> dataSource = GetOrderData();
+                IEnumerable dataSource = GetOrderData();
 
                 // Handling Searching
                 if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
@@ -36,14 +37,7 @@ namespace Grid_EF_UrlAdaptor.Controllers
                 // Handling filtering operation.
                 if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
                 {
-                    foreach (var condition in dataManagerRequest.Where)
-                    {
-                        foreach (var predicate in condition.predicates)
-                        {
-                            dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, predicate.Operator);
-                            // Add custom logic here if needed and remove above method.
-                        }
-                    }
+                    dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
                 }
 
                 // Handling Sorting
@@ -52,20 +46,7 @@ namespace Grid_EF_UrlAdaptor.Controllers
                     dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
                 }
 
-                // Handling Grouping
-                if (dataManagerRequest.Group != null && dataManagerRequest.Group.Count > 0)
-                {
-                    dataSource = (IEnumerable<Order>)DataOperations.PerformGrouping(dataSource, dataManagerRequest.Group);
-                }
-
                 int totalRecordsCount = dataSource.Cast<Order>().Count();
-
-                // Handling Aggregation
-                IDictionary<string, object> aggregates = null;
-                if (dataManagerRequest.Aggregates != null)
-                {
-                    aggregates = DataUtil.PerformAggregation(dataSource, dataManagerRequest.Aggregates);
-                }
 
                 // Handling Paging
                 if (dataManagerRequest.Skip != 0)
@@ -78,7 +59,7 @@ namespace Grid_EF_UrlAdaptor.Controllers
                     dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
                 }
 
-                return new { result = dataSource, count = totalRecordsCount, aggregates = aggregates };
+                return dataManagerRequest.RequiresCounts ? new DataResult() { Result = dataSource, Count = totalRecordsCount} : (object)dataSource;
             }
             catch (Exception ex)
             {
