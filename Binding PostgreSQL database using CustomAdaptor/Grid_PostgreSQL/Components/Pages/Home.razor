@@ -135,7 +135,7 @@
             try
             {
                 // Fetch all purchase orders from the database
-                IEnumerable<PurchaseOrder> dataSource = await _purchaseOrderService!.GetPurchaseOrdersDataAsync();
+                IEnumerable dataSource = await _purchaseOrderService!.GetPurchaseOrdersDataAsync();
 
                 // Apply search operation if search criteria exists
                 if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
@@ -155,45 +155,29 @@
                     dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
                 }
 
-                // Handle aggregates (sum, average, min, max, etc.)
-                IDictionary<string, object>? aggregates = null;
-                if (dataManagerRequest.Aggregates != null)
-                {
-                    aggregates = DataUtil.PerformAggregation(dataSource, dataManagerRequest.Aggregates);
-                }
-
-                // Calculate total record count before paging for accurate pagination
                 int totalRecordsCount = dataSource.Cast<PurchaseOrder>().Count();
-                DataResult dataObject = new DataResult();
-
-                // Apply grouping operation if group criteria exists
-                if (dataManagerRequest.Group != null)
-                {
-                    IEnumerable ResultData = dataSource.ToList();
-                    foreach (var group in dataManagerRequest.Group)
-                    {
-                        ResultData = DataUtil.Group<PurchaseOrder>(ResultData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
-                    }
-                    dataObject.Result = ResultData;
-                    dataObject.Count = totalRecordsCount;
-                    return dataManagerRequest.RequiresCounts ? dataObject : (object)ResultData;
-                }
-
                 // Apply paging skip operation
                 if (dataManagerRequest.Skip != 0)
                 {
                     dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
                 }
-
-                // Apply paging take operation to retrieve only the requested page size
                 if (dataManagerRequest.Take != 0)
                 {
                     dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
                 }
 
+                // Apply grouping operation if group criteria exists
+                if (dataManagerRequest.Group != null)
+                {
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        dataSource = DataUtil.Group<PurchaseOrder>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
+                }
+
                 // Return the result with total count for pagination metadata
                 return dataManagerRequest.RequiresCounts
-                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount, Aggregates = aggregates }
+                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount}
                     : (object)dataSource;
             }
             catch (Exception ex)
