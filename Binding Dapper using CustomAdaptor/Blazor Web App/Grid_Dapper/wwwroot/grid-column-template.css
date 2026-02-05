@@ -1,0 +1,101 @@
+﻿:host {
+    display: block;
+    padding: 1rem;
+}
+
+/* Payment Status Styling */
+.payment-paid {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.payment-pending {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.payment-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.payment-refunded {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+/* Reservation Status Styling */
+.status-confirmed {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.status-cancelled {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.status-checkedin {
+    background-color: #cce5ff;
+    color: #004085;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.status-checked-out {
+    background-color: #e2e3e5;
+    color: #383d41;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+/* Utility Classes */
+.text-success {
+    color: #28a745;
+}
+
+.font-weight-bold {
+    font-weight: 700;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
