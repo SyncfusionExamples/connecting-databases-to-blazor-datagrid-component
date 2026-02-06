@@ -92,7 +92,7 @@ namespace Grid_Dapper.Data
         /// Generates ReservationId before insert and auto-calculates NoOfDays and TotalAmount based on dates
         /// </summary>
         /// <param name="value">The reservation model to add</param>
-        public async Task AddReservationAsync(Reservation value)
+        public async Task AddReservationAsync(Reservation? value)
         {
             try
             {
@@ -112,7 +112,7 @@ namespace Grid_Dapper.Data
 
                 if (value.CheckInDate != default && value.CheckOutDate != default)
                 {
-                    value.NoOfDays = CalculateNoOfDays((DateTime)value.CheckInDate, (DateTime)value.CheckOutDate);
+                    value.NoOfDays = CalculateNoOfDays((DateTime)value.CheckInDate, (DateTime)value.CheckOutDate!);
                 }
 
                 if (value.AmountPerDay.HasValue && value.NoOfDays.HasValue && value.NoOfDays > 0)
@@ -148,7 +148,7 @@ namespace Grid_Dapper.Data
         /// Auto-calculates NoOfDays based on dates and TotalAmount if AmountPerDay changed
         /// </summary>
         /// <param name="value">The reservation model with updated values</param>
-        public async Task UpdateReservationAsync(Reservation value)
+        public async Task UpdateReservationAsync(Reservation? value)
         {
             try
             {
@@ -166,7 +166,7 @@ namespace Grid_Dapper.Data
 
                 if (value.CheckInDate != default && value.CheckOutDate != default)
                 {
-                    value.NoOfDays = CalculateNoOfDays((DateTime)value.CheckInDate, (DateTime)value.CheckOutDate);
+                    value.NoOfDays = CalculateNoOfDays((DateTime)value.CheckInDate!, (DateTime)value.CheckOutDate!);
                 }
 
                 if (value.AmountPerDay.HasValue && value.NoOfDays.HasValue && value.NoOfDays > 0)

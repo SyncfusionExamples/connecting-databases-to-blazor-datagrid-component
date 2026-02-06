@@ -1,6 +1,5 @@
 @page "/"
 @using System.Collections
-@using Grid_Dapper.Data
 @inject ReservationRepository ReservationService
 
 <section class="bg-gray-50 dark:bg-gray-950">
@@ -83,7 +82,6 @@
 
 @code{
     private CustomAdaptor? _customAdaptor;
-    private string? _validationErrorMessage;
 
     protected override void OnInitialized()
     {
@@ -106,7 +104,7 @@
         /// <summary>
         /// Reads data from the repository with filtering, sorting, and paging support
         /// </summary>
-        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? Key = null)
         {
             try
             {
@@ -288,7 +286,7 @@
     /// <summary>
     /// CSS class for payment status styling
     /// </summary>
-    private string GetPaymentStatusClass(string paymentStatus)
+    private string GetPaymentStatusClass(string? paymentStatus)
     {
         return paymentStatus?.ToLower() switch
         {
@@ -303,7 +301,7 @@
     /// <summary>
     /// CSS class for reservation status styling
     /// </summary>
-    private string GetReservationStatusClass(string reservationStatus)
+    private string GetReservationStatusClass(string? reservationStatus)
     {
         return reservationStatus?.ToLower() switch
         {
