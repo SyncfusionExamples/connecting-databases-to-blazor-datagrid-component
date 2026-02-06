@@ -86,7 +86,7 @@ namespace Grid_EF_UrlAdaptor.Controllers
         {
             try
             {
-                _context.Orders.Add(value.Value);
+                _context.Orders.Add(value.Value!);
                 _context.SaveChanges();
             }
             catch (Exception ex)
@@ -104,10 +104,10 @@ namespace Grid_EF_UrlAdaptor.Controllers
         {
             try
             {
-                var existingOrder = _context.Orders.Find(value.Value.OrderID);
+                var existingOrder = _context.Orders.Find(value.Value?.OrderID);
                 if (existingOrder != null)
                 {
-                    _context.Entry(existingOrder).CurrentValues.SetValues(value.Value);
+                    _context.Entry(existingOrder).CurrentValues.SetValues(value.Value!);
                     _context.SaveChanges();
                 }
             }
@@ -128,7 +128,7 @@ namespace Grid_EF_UrlAdaptor.Controllers
             {
                 //int orderId = Convert.ToInt32(value.Key);
                 //int orderId = value.Key is System.Text.Json.JsonElement je ? Convert.ToInt32(je.GetInt32()) : Convert.ToInt32(value.Key);
-                int orderId = Convert.ToInt32(value.Key.ToString());
+                int orderId = Convert.ToInt32(value.Key?.ToString());
                 var order = _context.Orders.Find(orderId);
                 if (order != null)
                 {
