@@ -53,7 +53,7 @@ namespace Grid_MSSQL.Data
                     .Where(ticket => !string.IsNullOrEmpty(ticket.PublicTicketId) && ticket.PublicTicketId.StartsWith(PublicTicketIdPrefix))
                     .Select(ticket =>
                     {
-                        string numberPart = ticket.PublicTicketId.Substring((PublicTicketIdPrefix + PublicTicketIdSeparator).Length);
+                        string numberPart = ticket.PublicTicketId!.Substring((PublicTicketIdPrefix + PublicTicketIdSeparator).Length);
                         if (int.TryParse(numberPart, out int number))
                             return number;
                         return 0;
@@ -77,7 +77,7 @@ namespace Grid_MSSQL.Data
         /// Generates PublicTicketId before insert
         /// </summary>
         /// <param name="value">The ticket model to add</param>
-        public async Task AddTicketAsync(Tickets value)
+        public async Task AddTicketAsync(Tickets? value)
         {
             try
             {
@@ -113,7 +113,7 @@ namespace Grid_MSSQL.Data
         /// Updates an existing ticket
         /// </summary>
         /// <param name="value">The ticket model with updated values</param>
-        public async Task UpdateTicketAsync(Tickets value)
+        public async Task UpdateTicketAsync(Tickets? value)
         {
             try
             {

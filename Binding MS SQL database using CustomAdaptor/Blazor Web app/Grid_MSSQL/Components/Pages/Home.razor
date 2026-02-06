@@ -1,6 +1,5 @@
 @page "/"
 @using System.Collections
-@using Grid_MSSQL.Data
 @inject TicketRepository TicketService
 <PageTitle>Network Support Ticket System</PageTitle>
 
@@ -116,7 +115,7 @@
         /// <param name="DataManagerRequest">DataManagerRequest contains the information regarding paging, grouping, filtering, searching, sorting which is handled on the Blazor DataGrid component side</param>
         /// <param name="Key">An optional parameter that can be used to perform additional data operations.</param>
         /// <returns>The data collection's type is determined by how this method has been implemented.</returns>
-        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? Key = null)
         {
             IEnumerable dataSource = await _ticketService!.GetTicketsDataAsync();
             
