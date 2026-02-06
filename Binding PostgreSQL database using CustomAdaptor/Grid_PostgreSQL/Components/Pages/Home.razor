@@ -1,6 +1,5 @@
 @page "/"
 @using System.Collections
-@using Grid_PostgreSQL.Data
 @inject PurchaseOrderRepository PurchaseOrderService
 <PageTitle>Purchase Order Management System</PageTitle>
 
@@ -130,7 +129,7 @@
         /// This method executes when the grid initializes and when filtering, searching, sorting, or paging occurs.
         /// Handles Search, Filter, Sort, Group, and Paging operations.
         /// </summary>
-        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string Key = null)
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? Key = null)
         {
             try
             {
@@ -253,7 +252,7 @@
                 {
                     await _purchaseOrderService!.RemovePurchaseOrderAsync(recordId);
                 }
-                return value;
+                return value!;
             }
             catch (Exception ex)
             {
