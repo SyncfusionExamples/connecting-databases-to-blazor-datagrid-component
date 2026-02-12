@@ -71,7 +71,7 @@ namespace Grid_MySQL.Data
         /// After insert, updates TransactionId with the actual Primary Key ID
         /// </summary>
         /// <param name="value">The transaction model to add</param>
-        public async Task AddTransactionAsync(TransactionModel transaction)
+        public async Task AddTransactionAsync(TransactionModel? transaction)
         {
             if (transaction == null)
                 throw new ArgumentNullException(nameof(transaction), "Transaction cannot be null");
@@ -105,7 +105,7 @@ namespace Grid_MySQL.Data
         /// <param name="transaction">The transaction object with updated values.</param>
         /// <exception cref="ArgumentNullException">Thrown if the transaction object is null.</exception>
         /// <exception cref="KeyNotFoundException">Thrown if the transaction to update does not exist in the database.</exception>
-        public async Task UpdateTransactionAsync(TransactionModel transaction)
+        public async Task UpdateTransactionAsync(TransactionModel? transaction)
         {
             if (transaction == null)
                 throw new ArgumentNullException(nameof(transaction), "Transaction cannot be null");

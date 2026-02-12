@@ -28,7 +28,7 @@
                         @{
                             var aggregate = (context as AggregateTemplateContext);
                             <div>
-                                <p>Sum: @aggregate.Sum</p>
+                                <p>Sum: @aggregate?.Sum</p>
                             </div>
                         }
                     </GroupFooterTemplate>
@@ -36,7 +36,7 @@
                         @{
                             var aggregate = (context as AggregateTemplateContext);
                             <div>
-                                <p>Sum: @aggregate.Sum</p>
+                                <p>Sum: @aggregate?.Sum</p>
                             </div>
                         }
                     </FooterTemplate>

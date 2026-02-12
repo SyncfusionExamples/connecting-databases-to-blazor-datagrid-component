@@ -120,7 +120,7 @@ namespace Grid_SQLite.Data
         /// Automatically generates AssetID and SerialNumber if not provided
         /// </summary>
         /// <param name="asset">The asset model to add</param>
-        public async Task AddAssetAsync(Asset asset)
+        public async Task AddAssetAsync(Asset? asset)
         {
             if (asset == null)
                 throw new ArgumentNullException(nameof(asset), "Asset cannot be null");
@@ -160,7 +160,7 @@ namespace Grid_SQLite.Data
         /// <param name="asset">The asset object with updated values.</param>
         /// <exception cref="ArgumentNullException">Thrown if the transaction object is null.</exception>
         /// <exception cref="KeyNotFoundException">Thrown if the transaction to update does not exist in the database.</exception>
-        public async Task UpdateAssetAsync(Asset asset)
+        public async Task UpdateAssetAsync(Asset? asset)
         {
             if (asset == null)
                 throw new ArgumentNullException(nameof(asset), "Asset cannot be null");
