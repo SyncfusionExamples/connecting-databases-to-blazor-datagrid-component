@@ -1,0 +1,284 @@
+@page "/"
+@using System.Collections
+@rendermode InteractiveServer
+@inject MongoDbService MongoDbService
+
+<PageTitle>Project Management</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="text-primary">
+                <i class="bi bi-graph-up"></i> Project Management Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <SfGrid TValue="Project"  AllowPaging="true" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" Toolbar="@ToolbarItems">
+
+                        <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+
+                        <GridPageSettings PageSize="10"></GridPageSettings>
+                        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+
+                        <GridColumns>
+                            <GridColumn Field=@nameof(Project.ProjectId) HeaderText="Project ID" IsPrimaryKey="true" Width="130" AllowAdding="false" AllowEditing="false"></GridColumn>
+                            <GridColumn Field=@nameof(Project.ProjectName) HeaderText="Project Name" Width="200"></GridColumn>
+                            <GridColumn Field=@nameof(Project.Client) HeaderText="Client" Width="180"></GridColumn>
+                            <GridColumn Field=@nameof(Project.ProjectManager) HeaderText="Project Manager" Width="180"></GridColumn>
+                            <GridColumn Field=@nameof(Project.Department) HeaderText="Department" Width="160"></GridColumn>
+                            <GridColumn Field=@nameof(Project.Status) HeaderText="Status" Width="120" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams">
+                                <Template>
+                                    @{
+                                        var project = context as Project;
+                                        var badgeClass = project?.Status switch
+                                        {
+                                            "Planning" => "badge bg-info",
+                                            "In Progress" => "badge bg-primary",
+                                            "Completed" => "badge bg-success",
+                                            "On Hold" => "badge bg-warning",
+                                            "Cancelled" => "badge bg-danger",
+                                            _ => "badge bg-secondary"
+                                        };
+                                    }
+                                    <span class="@badgeClass">@project?.Status</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Project.Priority) HeaderText="Priority" Width="120" EditType="EditType.DropDownEdit" EditorSettings="@PriorityDropDownParams">
+                                <Template>
+                                    @{
+                                        var project = context as Project;
+                                        var badgeClass = project?.Priority switch
+                                        {
+                                            "Low" => "badge bg-success",
+                                            "Medium" => "badge bg-warning",
+                                            "High" => "badge bg-danger",
+                                            "Critical" => "badge bg-danger",
+                                            _ => "badge bg-secondary"
+                                        };
+                                    }
+                                    <span class="@badgeClass">@project?.Priority</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Project.StartDate) HeaderText="Start Date" Type="ColumnType.DateTime" Format="MM/dd/yyyy" Width="140"></GridColumn>
+                            <GridColumn Field=@nameof(Project.EndDate) HeaderText="End Date" Type="ColumnType.DateTime" Format="MM/dd/yyyy" Width="140"></GridColumn>
+                            <GridColumn Field=@nameof(Project.Category) HeaderText="Category" Width="170"></GridColumn>
+                            <GridColumn Field=@nameof(Project.Budget) HeaderText="Budget" Type="ColumnType.Decimal" Format="C2" Width="110"></GridColumn>
+                            <GridColumn Field=@nameof(Project.Progress) HeaderText="Progress %" Type="ColumnType.Integer" Width="120">
+                                <Template>
+                                    @{
+                                        var project = context as Project;
+                                        var progressValue = project?.Progress ?? 0;
+                                    }
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" style="width: @(progressValue)%" aria-valuenow="@progressValue" aria-valuemin="0" aria-valuemax="100">
+                                            @progressValue%
+                                        </div>
+                                    </div>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Project.TeamSize) HeaderText="Team Size" Type="ColumnType.Integer" Width="120" TextAlign="TextAlign.Center"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private CustomAdaptor? _customAdaptor;
+
+    private List<string> ToolbarItems = new List<string>
+    {
+        "Add", "Edit", "Delete", "Update", "Cancel", "Search"
+    };
+
+    protected override void OnInitialized()
+    {
+        _customAdaptor = new CustomAdaptor { MongoDbService = MongoDbService };
+    }
+
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static MongoDbService? _mongoDbService { get; set; }
+
+        public MongoDbService? MongoDbService
+        {
+            get => _mongoDbService;
+            set => _mongoDbService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            IEnumerable dataSource = await _mongoDbService!.GetProjectsAsync();
+
+            //Handling Searching
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+            }
+
+            // Handling Filtering
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+
+            // Handling Sorting
+            if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+            {
+                dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+            }
+
+            int totalRecordsCount = dataSource.Cast<Project>().Count();
+
+            // Handling Paging
+            if (dataManagerRequest.Skip != 0)
+            {
+                dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+            }
+
+            if (dataManagerRequest.Take != 0)
+            {
+                dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+            }
+
+            // Handling Group operation in CustomAdaptor.
+            if (dataManagerRequest.Group != null)
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    dataSource = DataUtil.Group<Project>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                }
+            }
+
+            return dataManagerRequest.RequiresCounts
+                ? new DataResult() { Result = dataSource, Count = totalRecordsCount }
+                : (object)dataSource;
+        }
+
+        public override async Task<object?> InsertAsync(DataManager dataManager, object value, string? key = null)
+        {
+            try
+            {
+                if (value is Project newProject)
+                {
+                    var result = await _mongoDbService!.InsertProjectAsync(newProject);
+                    return result;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Insert operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                if (value is Project project)
+                {
+                    var result = await _mongoDbService!.UpdateProjectAsync(project.ProjectId, project);
+                    return result ? value : default;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Update operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                await _mongoDbService!.DeleteProjectAsync(value as string);
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Delete operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            if (changedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Project>)changedRecords)
+                {
+                    var project = record as Project;
+                    if (project != null)
+                    {
+                        await _mongoDbService!.UpdateProjectAsync(project.ProjectId, project);
+                    }
+                }
+            }
+            if (addedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Project>)addedRecords)
+                {
+                    await _mongoDbService!.InsertProjectAsync(record as Project);
+                }
+            }
+            if (deletedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Project>)deletedRecords)
+                {
+                    await _mongoDbService!.DeleteProjectAsync((record as Project)?.ProjectId);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of status used as a data source for the Status dropdown editor in the grid.
+    /// </summary>
+    private static List<Project> CustomStatus = new List<Project> {
+        new Project() { Status = "Planning" },
+        new Project() { Status = "In Progress" },
+        new Project() { Status = "Completed" },
+        new Project() { Status = "On Hold" },
+        new Project() { Status = "Cancelled" },
+    };
+
+    /// <summary>
+    /// Provides a list of status used as a data source for the Status dropdown editor in the grid.
+    /// </summary>
+    private static List<Project> CustomPriority = new List<Project> {
+        new Project() { Priority = "Low" },
+        new Project() { Priority = "Medium" },
+        new Project() { Priority = "High" },
+        new Project() { Priority = "Critical" },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with room type options for the RoomType column in grid edit mode.
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with payment status options for the PaymentStatus column in grid edit mode.
+    /// </summary>
+    private IEditorSettings PriorityDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomPriority, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+}
