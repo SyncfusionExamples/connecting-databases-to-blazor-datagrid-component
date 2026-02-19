@@ -1,0 +1,513 @@
+@page "/"
+@using System.Collections
+@using System.Text.Json
+@rendermode InteractiveServer
+@inject FirebaseService FirebaseService
+
+<PageTitle>Library Management</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="text-primary">
+                <i class="bi bi-book"></i> Library Management Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <!-- Bulk Import Section - Minimal UI -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="d-flex gap-2 align-items-center">
+                <label for="bulkImportFile" class="form-label mb-0 fw-bold">📁 Bulk Import JSON:</label>
+                <InputFile id="bulkImportFile" class="form-control form-control-sm" style="max-width: 300px;" accept=".json" OnChange="@OnFileSelected" disabled="@ImportInProgress" />
+                <button class="btn @GetImportButtonClass()" @onclick="ImportBooks" disabled="@(!IsReadyToImport || ImportInProgress)">
+                    <i class="@GetImportButtonIcon()"></i> @GetImportButtonText()
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <SfGrid @ref="_grid" TValue="Book" AllowPaging="true" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" Toolbar="@ToolbarItems">
+
+                        <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+
+                        <GridPageSettings PageSize="10"></GridPageSettings>
+                        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+
+                        <GridColumns>
+                            <GridColumn Field=@nameof(Book.BookId) HeaderText="Book ID" IsPrimaryKey="true" IsIdentity="true" Width="110"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Title) HeaderText="Title" Width="200" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Author) HeaderText="Author" Width="180"></GridColumn>
+                            <GridColumn Field=@nameof(Book.ISBN) HeaderText="ISBN" Width="180"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Category) HeaderText="Category" Width="120" EditType="EditType.DropDownEdit" EditorSettings="@CategoryDropDownParams">
+                                <Template>
+                                    @{
+                                        var book = context as Book;
+                                        var badgeClass = GetCategoryBadgeClass(book?.Category);
+                                    }
+                                    <span class="@badgeClass">@book?.Category</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Book.PublishDate) HeaderText="Publish Date" Type="ColumnType.DateTime" Format="MM/dd/yyyy" Width="140"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Language) HeaderText="Language" Width="120"></GridColumn>
+                            <GridColumn Field=@nameof(Book.TotalCopies) HeaderText="Total Copies" Type="ColumnType.Integer" Width="150" TextAlign="TextAlign.Center"></GridColumn>
+                            <GridColumn Field=@nameof(Book.AvailableCopies) HeaderText="Available" Type="ColumnType.Integer" Width="120" TextAlign="TextAlign.Center"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Location) HeaderText="Location" Width="130"></GridColumn>
+                            <GridColumn Field=@nameof(Book.BorrowedBy) HeaderText="Borrowed By" Width="150"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Status) HeaderText="Status" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams" Width="120">
+                                <Template>
+                                    @{
+                                        var book = context as Book;
+                                        var badgeClass = GetStatusBadgeClass(book?.Status);
+                                    }
+                                    <span class="@badgeClass">@book?.Status</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Book.LastUpdated) HeaderText="Last Updated" Type="ColumnType.DateTime" Format="MM/dd/yyyy HH:mm" Width="160"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<string> ToolbarItems = new List<string> { "Add", "Edit", "Delete", "Update", "Cancel", "Search" };
+    private SfGrid<Book>? _grid;
+    private string SelectedFileName = string.Empty;
+    private string FileContent = string.Empty;
+    private List<Book> PreviewedBooks = new List<Book>();
+    private double FileSizeKB = 0;
+    private bool IsReadyToImport = false;
+    private bool ImportInProgress = false;
+    private bool ImportCompleted = false;
+    
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected FirebaseService
+        _customAdaptor = new CustomAdaptor { FirebaseService = FirebaseService };
+    }
+
+    /// <summary>
+    /// CustomAdaptor class to handle grid data operations with Firebase Firestore Database
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static FirebaseService? _firebaseService { get; set; }
+        public FirebaseService? FirebaseService
+        {
+            get => _firebaseService;
+            set => _firebaseService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            try
+            {
+                // Fetch all books from the Firebase database
+                IEnumerable dataSource = await _firebaseService!.GetBooksAsync();
+
+                // Apply search operation if search criteria exists
+                if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+                }
+
+                // Apply filter operation if filter criteria exists
+                if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+                {
+                    dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+                }
+
+                // Apply sort operation if sort criteria exists
+                if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+                }
+
+                // Calculate total record count before paging for accurate pagination
+                int totalRecordsCount = dataSource.Cast<Book>().Count();
+
+                // Apply paging skip operation
+                if (dataManagerRequest.Skip != 0)
+                {
+                    dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                }
+
+                // Apply paging take operation to retrieve only the requested page size
+                if (dataManagerRequest.Take != 0)
+                {
+                    dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                }
+
+                // Handling Group operation in CustomAdaptor.
+                if (dataManagerRequest.Group != null)
+                {
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        dataSource = DataUtil.Group<Book>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
+                }
+
+                // Return the result with total count for pagination metadata
+                return dataManagerRequest.RequiresCounts
+                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount }
+                    : (object)dataSource;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReadAsync Error: {ex.Message}");
+                throw new Exception($"An error occurred while retrieving data: {ex.Message}");
+            }
+        }
+
+        public override async Task<object?> InsertAsync(DataManager dataManager, object value, string? key = null)
+        {
+            try
+            {
+                if (value is Book newBook)
+                {
+                    var result = await _firebaseService!.InsertBookAsync(newBook);
+                    return result;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Insert operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                if (value is Book book)
+                {
+                    var result = await _firebaseService!.UpdateBookAsync(book.BookId, book);
+                    return result ? value : default;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Update operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                await _firebaseService!.DeleteBookAsync(value as string);
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Delete operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            // Process updated records
+            if (changedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Book>)changedRecords)
+                {
+                    var book = record as Book;
+                    if (book != null)
+                    {
+                        await _firebaseService!.UpdateBookAsync(book.BookId, book);
+                    }
+                }
+            }
+
+            // Process newly added records
+            if (addedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Book>)addedRecords)
+                {
+                    await _firebaseService!.InsertBookAsync(record as Book);
+                }
+            }
+
+            // Process deleted records
+            if (deletedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Book>)deletedRecords)
+                {
+                    await _firebaseService!.DeleteBookAsync((record as Book)?.BookId);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Handles file selection and validates JSON format
+    /// </summary>
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            // Validate file
+            const long maxFileSize = 5 * 1024 * 1024; // 5MB
+            if (file.Size > maxFileSize)
+            {
+                ResetForm();
+                return;
+            }
+
+            // Read file
+            using (var stream = file.OpenReadStream(maxFileSize))
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    FileContent = await reader.ReadToEndAsync();
+                }
+            }
+
+            SelectedFileName = file.Name;
+            FileSizeKB = file.Size / 1024.0;
+
+            // Parse and validate JSON
+            ParseJsonAndPreview();
+        }
+        catch
+        {
+            ResetForm();
+        }
+    }
+
+    /// <summary>
+    /// Parses JSON content and previews books
+    /// </summary>
+    private void ParseJsonAndPreview()
+    {
+        try
+        {
+            PreviewedBooks.Clear();
+            IsReadyToImport = false;
+
+            using (JsonDocument doc = JsonDocument.Parse(FileContent))
+            {
+                var root = doc.RootElement;
+
+                // Try to find 'books' array
+                if (root.TryGetProperty("books", out var booksElement) && booksElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var bookElement in booksElement.EnumerateArray())
+                    {
+                        try
+                        {
+                            var jsonString = bookElement.GetRawText();
+                            var book = JsonSerializer.Deserialize<Book>(jsonString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                            if (book != null)
+                            {
+                                book.NormalizeToUtc();
+                                PreviewedBooks.Add(book);
+                            }
+                        }
+                        catch
+                        {
+                            // Skip invalid book entries
+                        }
+                    }
+                }
+            }
+
+            if (PreviewedBooks.Count > 0)
+            {
+                IsReadyToImport = true;
+            }
+            else
+            {
+                ResetForm();
+            }
+        }
+        catch
+        {
+            ResetForm();
+        }
+    }
+
+    /// <summary>
+    /// Performs the bulk import operation
+    /// </summary>
+    private async Task ImportBooks()
+    {
+        if (PreviewedBooks.Count == 0 || ImportInProgress) return;
+
+        ImportInProgress = true;
+        ImportCompleted = false;
+
+        try
+        {
+            bool success = await FirebaseService.BulkImportBooksAsync(PreviewedBooks);
+            
+            if (success)
+            {
+                ImportCompleted = true;
+                // Refresh the grid
+                if (_grid != null)
+                {
+                    await _grid.Refresh();
+                }
+                // Reset after a brief delay
+                await Task.Delay(2000);
+                ResetForm();
+            }
+            else
+            {
+                // Failed - reset to allow retry
+                ImportInProgress = false;
+            }
+        }
+        catch
+        {
+            // Failed - reset to allow retry
+            ImportInProgress = false;
+        }
+    }
+
+    /// <summary>
+    /// Resets the form for another import
+    /// </summary>
+    private void ResetForm()
+    {
+        SelectedFileName = string.Empty;
+        FileContent = string.Empty;
+        PreviewedBooks.Clear();
+        FileSizeKB = 0;
+        IsReadyToImport = false;
+        ImportInProgress = false;
+        ImportCompleted = false;
+    }
+
+    /// <summary>
+    /// Gets the CSS class for the import button based on state
+    /// </summary>
+    private string GetImportButtonClass()
+    {
+        if (ImportCompleted) return "btn btn-success btn-lg";
+        if (ImportInProgress) return "btn btn-warning btn-lg";
+        return "btn btn-primary btn-lg";
+    }
+
+    /// <summary>
+    /// Gets the icon class for the import button based on state
+    /// </summary>
+    private string GetImportButtonIcon()
+    {
+        if (ImportCompleted) return "bi bi-check-circle";
+        if (ImportInProgress) return "bi bi-hourglass-split";
+        return "bi bi-cloud-upload";
+    }
+
+    /// <summary>
+    /// Gets the text for the import button based on state
+    /// </summary>
+    private string GetImportButtonText()
+    {
+        if (ImportCompleted) return "Import Successful";
+        if (ImportInProgress) return "Importing...";
+        return "Import to Firestore";
+    }
+
+    /// <summary>
+    /// Provides a list of category options for the Category dropdown editor
+    /// </summary>
+    private static List<Book> CustomCategories = new List<Book> {
+        new Book() { Category = "Fiction" },
+        new Book() { Category = "Non-Fiction" },
+        new Book() { Category = "Science" },
+        new Book() { Category = "Technology" },
+        new Book() { Category = "History" },
+        new Book() { Category = "Biography" },
+        new Book() { Category = "Romance" },
+        new Book() { Category = "Mystery" },
+        new Book() { Category = "Education" },
+    };
+
+    /// <summary>
+    /// Provides a list of status options for the Status dropdown editor
+    /// </summary>
+    private static List<Book> CustomStatus = new List<Book> {
+        new Book() { Status = "Available" },
+        new Book() { Status = "Borrowed" },
+        new Book() { Status = "Reserved" },
+        new Book() { Status = "Lost" },
+        new Book() { Status = "Damaged" },
+        new Book() { Status = "Maintenance" },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with category options
+    /// </summary>
+    private IEditorSettings CategoryDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomCategories, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with status options
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Gets badge CSS class for Category column
+    /// </summary>
+    private string GetCategoryBadgeClass(string? category)
+    {
+        return category switch
+        {
+            "Fiction" => "badge bg-primary",
+            "Non-Fiction" => "badge bg-info",
+            "Science" => "badge bg-success",
+            "Technology" => "badge bg-warning",
+            "History" => "badge bg-danger",
+            "Biography" => "badge bg-secondary",
+            "Romance" => "badge bg-info",
+            "Mystery" => "badge bg-dark",
+            "Education" => "badge bg-info",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    /// <summary>
+    /// Gets badge CSS class for Status column
+    /// </summary>
+    private string GetStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Available" => "badge bg-success",
+            "Borrowed" => "badge bg-info",
+            "Reserved" => "badge bg-primary",
+            "Lost" => "badge bg-danger",
+            "Damaged" => "badge bg-warning",
+            "Maintenance" => "badge bg-secondary",
+            _ => "badge bg-secondary"
+        };
+    }
+}
