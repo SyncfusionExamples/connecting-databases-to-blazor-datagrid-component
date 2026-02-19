@@ -1,0 +1,255 @@
+@page "/"
+@rendermode InteractiveServer
+@using System.Collections
+@inject SubscriptionRepository SubscriptionService
+
+<div class="container-fluid p-4">
+    <h1 class="mb-4">Subscription Management System</h1>
+    <p class="mb-3">Manage and view all subscription records from the MariaDB database.</p>
+
+    <SfGrid TValue="SubscriptionModel" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" AllowPaging="true"
+        Height="500px" Width="100%" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel", "Search" })">
+        <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+        <GridEditSettings AllowEditing="true" AllowAdding="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridColumns>
+            <GridColumn Field=@nameof(SubscriptionModel.Id) IsPrimaryKey="true" ShowInColumnChooser="false" ShowColumnMenu="false"></GridColumn>
+            <GridColumn Field=@nameof(SubscriptionModel.PublicID) HeaderText="Public ID" Width="170" TextAlign="TextAlign.Left" AllowAdding="false" AllowEditing="false">
+                <Template>
+                    @{
+                        var data = (SubscriptionModel)context;
+                    }   
+                    <a class="status-text status-ticket-id">
+                        @data.PublicID
+                    </a>
+                </Template>
+            </GridColumn>
+            <GridColumn Field=@nameof(SubscriptionModel.CustomerId) HeaderText="Customer ID" Width="140" ValidationRules="@(new ValidationRules { Required = true })" EditType="EditType.NumericEdit" />
+            <GridColumn Field=@nameof(SubscriptionModel.SubscriptionID) HeaderText="Subscription ID" Width="140" ValidationRules="@(new ValidationRules { Required = true })" EditType="EditType.NumericEdit" />
+            <GridColumn Field=@nameof(SubscriptionModel.InvoiceNumber) HeaderText="Invoice No" Width="130" EditType="EditType.DefaultEdit" />
+            <GridColumn Field=@nameof(SubscriptionModel.Description) HeaderText="Description" Width="180" EditType="EditType.DefaultEdit" />
+            <GridColumn Field=@nameof(SubscriptionModel.Amount) HeaderText="Amount" Width="130" ValidationRules="@(new ValidationRules { Required = true })" Format="N2" TextAlign="TextAlign.Right" EditType="EditType.NumericEdit">
+                <Template>
+                    @{
+                        var amount = (context as SubscriptionModel)?.Amount ?? 0;
+                        var amountClass = amount < 0 ? "amnt-negative" : "amnt-positive";
+                    }
+                    <span class="@amountClass">@amount.ToString("N2")</span>
+                </Template>
+            </GridColumn>
+            <GridColumn Field=@nameof(SubscriptionModel.CurrencyCode) HeaderText="Curr" Width="100" TextAlign="TextAlign.Center" EditType="EditType.DefaultEdit" />
+            <GridColumn Field=@nameof(SubscriptionModel.SubscriptionType) HeaderText="Type" Width="100" EditType="EditType.DropDownEdit" EditorSettings="@TypeDropDownParams">
+                <Template>
+                    @{
+                        var data = (SubscriptionModel)context;
+                    }
+                    <span class="chip @GetCategoryClass(data)">
+                        @data.SubscriptionType
+                    </span>
+                </Template>
+            </GridColumn>
+            <GridColumn Field=@nameof(SubscriptionModel.PaymentGateway) HeaderText="Gateway" Width="130" EditType="EditType.DropDownEdit" EditorSettings="@GatewayDropDownParams" />
+            <GridColumn Field=@nameof(SubscriptionModel.SubscriptionStartDate) HeaderText="Start Date" Width="170" Format="dd-MMM-yy hh:mm tt" TextAlign="TextAlign.Right" Type="ColumnType.DateTime" AllowEditing="false" />
+            <GridColumn Field=@nameof(SubscriptionModel.SubscriptionEndDate) HeaderText="End Date" Width="170" Format="dd-MMM-yy hh:mm tt" TextAlign="TextAlign.Right" Type="ColumnType.DateTime" EditType="EditType.DateTimePickerEdit" />
+
+            <GridColumn Field=@nameof(SubscriptionModel.Status) HeaderText="Status" Width="110" ValidationRules="@(new ValidationRules { Required = true })" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams">
+                <Template>
+                    @{
+                        var status = (context as SubscriptionModel)?.Status;
+                        var badgeClass = status?.ToLower() switch
+                        {
+                            "active" => "e-badge e-badge-success",
+                            "expired" => "e-badge e-badge-danger",
+                            "pending" => "e-badge e-badge-warning",
+                            "paused" => "e-badge e-badge-info",
+                            _ => "e-badge"
+                        };
+                    }
+                    <span class="@badgeClass">@status</span>
+                </Template>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+@code {
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected SubscriptionRepository
+        _customAdaptor = new CustomAdaptor { SubscriptionService = SubscriptionService };
+    }
+
+    /// <summary>
+    /// CustomAdaptor class to handle grid data operations with MariaDB using Entity Framework
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static SubscriptionRepository? _subscriptionService { get; set; }
+        public SubscriptionRepository? SubscriptionService 
+        { 
+            get => _subscriptionService;
+            set => _subscriptionService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            IEnumerable dataSource = await _subscriptionService!.GetSubscriptionsAsync();
+
+            // Handling Search
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+            }
+
+            // Handling Filtering
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+
+            // Handling Sorting
+            if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+            {
+                dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+            }
+
+            int totalRecordsCount = dataSource.Cast<SubscriptionModel>().Count();
+            // Handling Paging
+            if (dataManagerRequest.Skip != 0)
+            {
+                dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+            }
+            if (dataManagerRequest.Take != 0)
+            {
+                dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+            }
+
+            // Handling Group operation in CustomAdaptor.
+            if (dataManagerRequest.Group != null)
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    dataSource = DataUtil.Group<SubscriptionModel>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    //Add custom logic here if needed and remove above method
+                }
+            }
+
+            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = dataSource, Count = totalRecordsCount } : (object)dataSource;
+        }
+
+        public override async Task<object> InsertAsync(DataManager dataManager, object value, string? key)
+        {
+            await _subscriptionService!.AddSubscriptionAsync(value as SubscriptionModel);
+            return value;
+        }
+
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            await _subscriptionService!.UpdateSubscriptionAsync(value as SubscriptionModel);
+            return value;
+        }
+
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            await _subscriptionService!.RemoveSubscriptionAsync(value as int?);
+            return value;
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            if (changedRecords != null)
+            {
+                foreach (var record in (IEnumerable<SubscriptionModel>)changedRecords)
+                {
+                    await _subscriptionService!.UpdateSubscriptionAsync(record as SubscriptionModel);
+                }
+            }
+            if (addedRecords != null)
+            {
+                foreach (var record in (IEnumerable<SubscriptionModel>)addedRecords)
+                {
+                    await _subscriptionService!.AddSubscriptionAsync(record as SubscriptionModel);
+                }
+            }
+            if (deletedRecords != null)
+            {
+                foreach (var record in (IEnumerable<SubscriptionModel>)deletedRecords)
+                {
+                    await _subscriptionService!.RemoveSubscriptionAsync((record as SubscriptionModel).Id);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of payment gateway options used as a data source for the Gateway dropdown editor in the grid.
+    /// </summary>
+    private static List<SubscriptionModel> CustomGateway = new List<SubscriptionModel> {
+        new SubscriptionModel() { PaymentGateway = "Razorpay" },
+        new SubscriptionModel() { PaymentGateway= "GooglePay" },
+        new SubscriptionModel() { PaymentGateway= "Stripe" },
+        new SubscriptionModel() { PaymentGateway= "PhonePe" },
+        new SubscriptionModel() { PaymentGateway= "Paytm" },
+    };
+
+    /// <summary>
+    /// Provides a list of subscription types used as a data source for the Type dropdown editor in the grid.
+    /// </summary>
+    private static List<SubscriptionModel> CustomType = new List<SubscriptionModel> {
+        new SubscriptionModel() { SubscriptionType = "ACTIVE" },
+        new SubscriptionModel() { SubscriptionType = "PAUSED" },
+        new SubscriptionModel() { SubscriptionType = "EXPIRED" },
+    };
+
+    /// <summary>
+    /// Provides a list of subscription statuses used as a data source for the Status dropdown editor in the grid.
+    /// </summary>
+    private static List<SubscriptionModel> CustomStatus = new List<SubscriptionModel> {
+        new SubscriptionModel() { Status = "ACTIVE" },
+        new SubscriptionModel() { Status = "PAUSED" },
+        new SubscriptionModel() { Status = "PENDING" },
+        new SubscriptionModel() { Status = "EXPIRED" },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with payment gateway options for the PaymentGateway column in grid edit mode.
+    /// </summary>
+    private IEditorSettings GatewayDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomGateway, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with subscription type options for the SubscriptionType column in grid edit mode.
+    /// </summary>
+    private IEditorSettings TypeDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomType, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with subscription status options for the Status column in grid edit mode.
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Returns a CSS class name based on the subscription type to apply visual styling in the grid template.
+    /// </summary>
+    private string GetCategoryClass(SubscriptionModel data)
+    {
+        return data.SubscriptionType?.ToLower() switch
+        {
+            "active" => "category-active",
+            "paused" => "category-paused",
+            "expired" => "category-expired",
+            _ => ""
+        };
+    }
+}
