@@ -1,0 +1,320 @@
+@page "/"
+@using System.Collections
+@rendermode InteractiveServer
+@inject FirebaseService FirebaseService
+
+<PageTitle>Library Management</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="text-primary">
+                <i class="bi bi-book"></i> Library Management Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <SfGrid TValue="Book" AllowPaging="true" AllowSorting="true" AllowFiltering="true" AllowGrouping="true" Toolbar="@ToolbarItems">
+
+                        <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+
+                        <GridPageSettings PageSize="10"></GridPageSettings>
+                        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+
+                        <GridColumns>
+                            <GridColumn Field=@nameof(Book.BookId) HeaderText="Book ID" IsPrimaryKey="true" Width="110" AllowAdding="false" AllowEditing="false"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Title) HeaderText="Title" Width="200" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Author) HeaderText="Author" Width="180"></GridColumn>
+                            <GridColumn Field=@nameof(Book.ISBN) HeaderText="ISBN" Width="180"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Category) HeaderText="Category" Width="120" EditType="EditType.DropDownEdit" EditorSettings="@CategoryDropDownParams">
+                                <Template>
+                                    @{
+                                        var book = context as Book;
+                                        var badgeClass = GetCategoryBadgeClass(book?.Category);
+                                    }
+                                    <span class="@badgeClass">@book?.Category</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Book.PublishDate) HeaderText="Publish Date" Type="ColumnType.DateTime" Format="MM/dd/yyyy" Width="140"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Language) HeaderText="Language" Width="120"></GridColumn>
+                            <GridColumn Field=@nameof(Book.TotalCopies) HeaderText="Total Copies" Type="ColumnType.Integer" Width="150" TextAlign="TextAlign.Center"></GridColumn>
+                            <GridColumn Field=@nameof(Book.AvailableCopies) HeaderText="Available" Type="ColumnType.Integer" Width="120" TextAlign="TextAlign.Center"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Location) HeaderText="Location" Width="130"></GridColumn>
+                            <GridColumn Field=@nameof(Book.BorrowedBy) HeaderText="Borrowed By" Width="150"></GridColumn>
+                            <GridColumn Field=@nameof(Book.Status) HeaderText="Status" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams" Width="120">
+                                <Template>
+                                    @{
+                                        var book = context as Book;
+                                        var badgeClass = GetStatusBadgeClass(book?.Status);
+                                    }
+                                    <span class="@badgeClass">@book?.Status</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(Book.LastUpdated) HeaderText="Last Updated" Type="ColumnType.DateTime" Format="MM/dd/yyyy HH:mm" Width="160"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<string> ToolbarItems = new List<string> { "Add", "Edit", "Delete", "Update", "Cancel", "Search" };
+    
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected FirebaseService
+        _customAdaptor = new CustomAdaptor { FirebaseService = FirebaseService };
+    }
+
+    /// <summary>
+    /// CustomAdaptor class to handle grid data operations with Firebase Realtime Database
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static FirebaseService? _firebaseService { get; set; }
+        public FirebaseService? FirebaseService 
+        { 
+            get => _firebaseService;
+            set => _firebaseService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            try
+            {
+                // Fetch all books from the Firebase database
+                IEnumerable dataSource = await _firebaseService!.GetBooksAsync();
+
+                // Apply search operation if search criteria exists
+                if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+                }
+
+                // Apply filter operation if filter criteria exists
+                if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+                {
+                    dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+                }
+
+                // Apply sort operation if sort criteria exists
+                if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+                }
+
+                // Calculate total record count before paging for accurate pagination
+                int totalRecordsCount = dataSource.Cast<Book>().Count();
+
+                // Apply paging skip operation
+                if (dataManagerRequest.Skip != 0)
+                {
+                    dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                }
+
+                // Apply paging take operation to retrieve only the requested page size
+                if (dataManagerRequest.Take != 0)
+                {
+                    dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                }
+
+                // Handling Group operation in CustomAdaptor.
+                if (dataManagerRequest.Group != null)
+                {
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        dataSource = DataUtil.Group<Book>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
+                }
+
+                // Return the result with total count for pagination metadata
+                return dataManagerRequest.RequiresCounts
+                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount }
+                    : (object)dataSource;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReadAsync Error: {ex.Message}");
+                throw new Exception($"An error occurred while retrieving data: {ex.Message}");
+            }
+        }
+
+        public override async Task<object?> InsertAsync(DataManager dataManager, object value, string? key = null)
+        {
+            try
+            {
+                if (value is Book newBook)
+                {
+                    var result = await _firebaseService!.InsertBookAsync(newBook);
+                    return result;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Insert operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                if (value is Book book)
+                {
+                    var result = await _firebaseService!.UpdateBookAsync(book.BookId, book);
+                    return result ? value : default;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Update operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                await _firebaseService!.DeleteBookAsync(value as string);
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Delete operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            // Process updated records
+            if (changedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Book>)changedRecords)
+                {
+                    var book = record as Book;
+                    if (book != null)
+                    {
+                        await _firebaseService!.UpdateBookAsync(book.BookId, book);
+                    }
+                }
+            }
+
+            // Process newly added records
+            if (addedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Book>)addedRecords)
+                {
+                    await _firebaseService!.InsertBookAsync(record as Book);
+                }
+            }
+
+            // Process deleted records
+            if (deletedRecords != null)
+            {
+                foreach (var record in (IEnumerable<Book>)deletedRecords)
+                {
+                    await _firebaseService!.DeleteBookAsync((record as Book)?.BookId);
+                }
+            }
+            return key;
+        }
+    }
+
+    /// <summary>
+    /// Provides a list of category options used as a data source for the Category dropdown editor in the grid.
+    /// </summary>
+    private static List<Book> CustomCategories = new List<Book> {
+        new Book() { Category = "Fiction" },
+        new Book() { Category = "Non-Fiction" },
+        new Book() { Category = "Science" },
+        new Book() { Category = "Technology" },
+        new Book() { Category = "History" },
+        new Book() { Category = "Biography" },
+        new Book() { Category = "Romance" },
+        new Book() { Category = "Mystery" },
+        new Book() { Category = "Education" },
+    };
+
+    /// <summary>
+    /// Provides a list of status options used as a data source for the Status dropdown editor in the grid.
+    /// </summary>
+    private static List<Book> CustomStatus = new List<Book> {
+        new Book() { Status = "Available" },
+        new Book() { Status = "Borrowed" },
+        new Book() { Status = "Reserved" },
+        new Book() { Status = "Lost" },
+        new Book() { Status = "Damaged" },
+        new Book() { Status = "Maintenance" },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with category options for the Category column in grid edit mode.
+    /// </summary>
+    private IEditorSettings CategoryDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomCategories, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Dropdown editor settings configured with status options for the Status column in grid edit mode.
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CustomStatus, Query = new Syncfusion.Blazor.Data.Query() },
+    };
+
+    /// <summary>
+    /// Gets the appropriate badge CSS class for the Category column based on the category value.
+    /// </summary>
+    /// <param name="category">The book category</param>
+    /// <returns>Bootstrap badge CSS class string</returns>
+    private string GetCategoryBadgeClass(string? category)
+    {
+        return category switch
+        {
+            "Fiction" => "badge bg-primary",
+            "Non-Fiction" => "badge bg-info",
+            "Science" => "badge bg-success",
+            "Technology" => "badge bg-warning",
+            "History" => "badge bg-danger",
+            "Biography" => "badge bg-secondary",
+            "Romance" => "badge bg-pink",
+            "Mystery" => "badge bg-dark",
+            "Education" => "badge bg-light",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    /// <summary>
+    /// Gets the appropriate badge CSS class for the Status column based on the status value.
+    /// </summary>
+    /// <param name="status">The book status</param>
+    /// <returns>Bootstrap badge CSS class string</returns>
+    private string GetStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Available" => "badge bg-success",
+            "Borrowed" => "badge bg-info",
+            "Reserved" => "badge bg-primary",
+            "Lost" => "badge bg-danger",
+            "Damaged" => "badge bg-warning",
+            "Maintenance" => "badge bg-secondary",
+            _ => "badge bg-secondary"
+        };
+    }
+}
