@@ -1,0 +1,332 @@
+﻿@page "/"
+@using System.Collections
+@rendermode InteractiveServer
+@inject DynamoDBService DynamoDBService
+
+<PageTitle>Inventory Management Dashboard</PageTitle>
+
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="text-primary">
+                <i class="bi bi-box"></i> Inventory Management Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <!-- DataGrid Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <SfGrid @ref="GridInstance" TValue="Inventory" AllowPaging="true" AllowSorting="true" AllowFiltering="true" 
+                        AllowGrouping="true" Toolbar="@ToolbarItems">
+                    <SfDataManager AdaptorInstance="@typeof(CustomAdaptor)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+
+                    <GridPageSettings PageSize="10"></GridPageSettings>
+                    <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Menu"></GridFilterSettings>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+
+                    <GridColumns>
+                        <GridColumn Field=@nameof(Inventory.InventoryID) HeaderText="Inventory ID" IsPrimaryKey="true" IsIdentity="true" Width="140"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.SKUID) HeaderText="SKU" Width="120" AllowEditing="false" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.ProductName) HeaderText="Product Name" Width="200" ValidationRules="@(new ValidationRules { Required = true })"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.Category) HeaderText="Category" Width="130" EditType="EditType.DropDownEdit" EditorSettings="@CategoryDropDownParams">
+                            <Template>
+                                @{
+                                    var item = context as Inventory;
+                                    var badgeClass = GetCategoryBadgeClass(item?.Category);
+                                }
+                                <span class="@badgeClass">@item?.Category</span>
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(Inventory.CurrentStock) HeaderText="Current Stock" Type="ColumnType.Integer" Width="140" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.ReservedStock) HeaderText="Reserved" Type="ColumnType.Integer" Width="120" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.MinThreshold) HeaderText="Min Threshold" Type="ColumnType.Integer" Width="140" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.Location) HeaderText="Location" Width="130"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.CostPerUnit) HeaderText="Cost/Unit" Type="ColumnType.Integer" Format="C2" Width="130" TextAlign="TextAlign.Right"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.Supplier) HeaderText="Supplier" Width="150"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.ReorderQuantity) HeaderText="Reorder Qty" Type="ColumnType.Integer" Width="130" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.ExpiryDate) HeaderText="Expiry Date" Type="ColumnType.DateTime" Format="MM/dd/yyyy hh:mm tt" Width="140"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.Status) HeaderText="Status" EditType="EditType.DropDownEdit" EditorSettings="@StatusDropDownParams" Width="120">
+                            <Template>
+                                @{
+                                    var item = context as Inventory;
+                                    var badgeClass = GetStatusBadgeClass(item?.Status);
+                                }
+                                <span class="@badgeClass">@item?.Status</span>
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(Inventory.LastRestockDate) HeaderText="Last Restock" Type="ColumnType.DateTime" Format="MM/dd/yyyy hh:mm tt" Width="160"></GridColumn>
+                        <GridColumn Field=@nameof(Inventory.LastAuditDate) HeaderText="Last Audit" Type="ColumnType.DateTime" Format="MM/dd/yyyy hh:mm tt" Width="160"></GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private SfGrid<Inventory>? GridInstance;
+    private List<string> ToolbarItems = new List<string> { "Add", "Edit", "Delete", "Update", "Cancel", "Search" };
+    private CustomAdaptor? _customAdaptor;
+
+    protected override void OnInitialized()
+    {
+        // Initialize the CustomAdaptor with the injected DynamoDBService
+        _customAdaptor = new CustomAdaptor { DynamoDBService = DynamoDBService };
+
+    }
+
+    /// <summary>
+    /// CustomAdaptor class to bridge DataGrid with DynamoDB operations
+    /// </summary>
+    public class CustomAdaptor : DataAdaptor
+    {
+        public static DynamoDBService? _dynamoDBService { get; set; }
+        public DynamoDBService? DynamoDBService
+        {
+            get => _dynamoDBService;
+            set => _dynamoDBService = value;
+        }
+
+        public override async Task<object> ReadAsync(DataManagerRequest dataManagerRequest, string? key = null)
+        {
+            try
+            {
+                // Fetch all inventory items from DynamoDB
+                IEnumerable dataSource = await _dynamoDBService!.GetAllInventoriesAsync();
+
+                // Apply search operation if search criteria exists
+                if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSearching(dataSource, dataManagerRequest.Search);
+                }
+
+                // Apply filter operation if filter criteria exists
+                if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+                {
+                    dataSource = DataOperations.PerformFiltering(dataSource, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+                }
+
+                // Apply sort operation if sort criteria exists
+                if (dataManagerRequest.Sorted != null && dataManagerRequest.Sorted.Count > 0)
+                {
+                    dataSource = DataOperations.PerformSorting(dataSource, dataManagerRequest.Sorted);
+                }
+
+                // Calculate total record count before paging for accurate pagination
+                int totalRecordsCount = dataSource.Cast<Inventory>().Count();
+
+                // Apply paging skip operation
+                if (dataManagerRequest.Skip != 0)
+                {
+                    dataSource = DataOperations.PerformSkip(dataSource, dataManagerRequest.Skip);
+                }
+
+                // Apply paging take operation to retrieve only the requested page size
+                if (dataManagerRequest.Take != 0)
+                {
+                    dataSource = DataOperations.PerformTake(dataSource, dataManagerRequest.Take);
+                }
+
+                // Handling Group operation in CustomAdaptor
+                if (dataManagerRequest.Group != null && dataManagerRequest.Group.Count > 0)
+                {
+                    foreach (var group in dataManagerRequest.Group)
+                    {
+                        dataSource = DataUtil.Group<Inventory>(dataSource, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                    }
+                }
+
+                // Return the result with total count for pagination metadata
+                return dataManagerRequest.RequiresCounts
+                    ? new DataResult() { Result = dataSource, Count = totalRecordsCount }
+                    : (object)dataSource;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReadAsync Error: {ex.Message}");
+                throw new Exception($"An error occurred while retrieving data: {ex.Message}");
+            }
+        }
+
+        public override async Task<object?> InsertAsync(DataManager dataManager, object value, string? key = null)
+        {
+            try
+            {
+                if (value is Inventory newItem)
+                {
+                    // Validate required fields
+                    if (string.IsNullOrWhiteSpace(newItem.InventoryID) || string.IsNullOrWhiteSpace(newItem.SKUID))
+                    {
+                        throw new ArgumentException("InventoryID and SKUID are required");
+                    }
+
+                    var result = await _dynamoDBService!.InsertInventoryAsync(newItem);
+                    return result;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Insert operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> UpdateAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                if (value is Inventory item)
+                {
+                    var result = await _dynamoDBService!.UpdateInventoryAsync(item);
+                    return result ? value : default;
+                }
+                return default;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Update operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object?> RemoveAsync(DataManager dataManager, object value, string? keyField, string key)
+        {
+            try
+            {
+                await _dynamoDBService!.DeleteInventoryAsync(value as string);
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in Delete operation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public override async Task<object> BatchUpdateAsync(DataManager dataManager, object changedRecords, object addedRecords, object deletedRecords, string? keyField, string key, int? dropIndex)
+        {
+            try
+            {
+                // Process updated records
+                if (changedRecords != null)
+                {
+                    foreach (var record in (IEnumerable<Inventory>)changedRecords)
+                    {
+                        await _dynamoDBService!.UpdateInventoryAsync(record);
+                    }
+                }
+
+                // Process newly added records
+                if (addedRecords != null)
+                {
+                    foreach (var record in (IEnumerable<Inventory>)addedRecords)
+                    {
+                        await _dynamoDBService!.InsertInventoryAsync(record);
+                    }
+                }
+
+                // Process deleted records
+                if (deletedRecords != null)
+                {
+                    foreach (var record in (IEnumerable<Inventory>)deletedRecords)
+                    {
+                        await _dynamoDBService!.DeleteInventoryAsync(record.SKUID);
+                    }
+                }
+
+                return key;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in BatchUpdate operation: {ex.Message}");
+                throw;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Category options for dropdown editor
+    /// </summary>
+    private static List<Inventory> CategoryOptions = new List<Inventory>
+    {
+        new Inventory() { Category = "Electronics" },
+        new Inventory() { Category = "Office Supplies" },
+        new Inventory() { Category = "Furniture" },
+        new Inventory() { Category = "Cleaning Supplies" },
+        new Inventory() { Category = "Safety Equipment" },
+        new Inventory() { Category = "Tools" },
+        new Inventory() { Category = "Hardware" },
+        new Inventory() { Category = "Stationery" },
+        new Inventory() { Category = "Packaging" },
+        new Inventory() { Category = "Textiles" },
+        new Inventory() { Category = "Beverages" },
+        new Inventory() { Category = "Literature" }
+    };
+
+    /// <summary>
+    /// Status options for dropdown editor
+    /// </summary>
+    private static List<Inventory> StatusOptions = new List<Inventory>
+    {
+        new Inventory() { Status = "Active" },
+        new Inventory() { Status = "Low Stock" },
+        new Inventory() { Status = "Inactive" }
+    };
+
+    /// <summary>
+    /// Dropdown editor settings for Category column
+    /// </summary>
+    private IEditorSettings CategoryDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = CategoryOptions, Query = new Syncfusion.Blazor.Data.Query() }
+    };
+
+    /// <summary>
+    /// Dropdown editor settings for Status column
+    /// </summary>
+    private IEditorSettings StatusDropDownParams = new DropDownEditCellParams
+    {
+        Params = new DropDownListModel<object, object>() { DataSource = StatusOptions, Query = new Syncfusion.Blazor.Data.Query() }
+    };
+
+    /// <summary>
+    /// Gets the CSS badge class for Category column based on value
+    /// </summary>
+    private string GetCategoryBadgeClass(string? category)
+    {
+        return category switch
+        {
+            "Electronics" => "badge bg-primary",
+            "Tools" => "badge bg-primary",
+            "Office Supplies" => "badge bg-info",
+            "Cleaning Supplies" => "badge bg-success",
+            "Furniture" => "badge bg-warning",
+            "Safety Equipment" => "badge bg-warning",
+            "Literature" => "badge bg-warning",
+            "Hardware" => "badge bg-danger",
+            "Stationery" => "badge bg-secondary",
+            "Beverages" => "badge bg-secondary",
+            "Packaging" => "badge bg-light text-dark",
+            "Textiles" => "badge bg-light text-dark",
+            _ => "badge bg-secondary"
+        };
+    }
+
+    /// <summary>
+    /// Gets the CSS badge class for Status column based on value
+    /// </summary>
+    private string GetStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Active" => "badge bg-success",
+            "Low Stock" => "badge bg-danger",
+            "Inactive" => "badge bg-warning",
+            _ => "badge bg-secondary"
+        };
+    }
+}
