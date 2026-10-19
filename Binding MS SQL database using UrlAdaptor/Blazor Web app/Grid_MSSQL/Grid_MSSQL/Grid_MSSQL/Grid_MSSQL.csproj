@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Grid_MSSQL.Client\Grid_MSSQL.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.32" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Syncfusion.Blazor.Data" Version="24.2.8" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
